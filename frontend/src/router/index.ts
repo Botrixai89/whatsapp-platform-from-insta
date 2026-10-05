@@ -6,6 +6,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     requiresAuth?: boolean
     permission?: string // Resource permission required (e.g., 'analytics', 'chat')
+    superAdmin?: boolean // Owner Panel pages (super admins only)
   }
 }
 
@@ -51,6 +52,49 @@ const router = createRouter({
           component: () => import('@/views/chat/ChatView.vue'),
           props: true,
           meta: { permission: 'chat', stableKey: true }
+        },
+        // Owner Panel (super admin only)
+        {
+          path: 'admin',
+          name: 'owner-dashboard',
+          component: () => import('@/views/admin/OwnerDashboardView.vue'),
+          meta: { superAdmin: true }
+        },
+        {
+          path: 'admin/clients',
+          name: 'owner-clients',
+          component: () => import('@/views/admin/ClientsView.vue'),
+          meta: { superAdmin: true }
+        },
+        {
+          path: 'admin/clients/:id',
+          name: 'owner-client-detail',
+          component: () => import('@/views/admin/ClientDetailView.vue'),
+          meta: { superAdmin: true }
+        },
+        {
+          path: 'admin/plans',
+          name: 'owner-plans',
+          component: () => import('@/views/admin/PlansView.vue'),
+          meta: { superAdmin: true }
+        },
+        {
+          path: 'admin/rates',
+          name: 'owner-rates',
+          component: () => import('@/views/admin/RatesView.vue'),
+          meta: { superAdmin: true }
+        },
+        {
+          path: 'admin/transactions',
+          name: 'owner-transactions',
+          component: () => import('@/views/admin/TransactionsView.vue'),
+          meta: { superAdmin: true }
+        },
+        {
+          path: 'wallet',
+          name: 'wallet',
+          component: () => import('@/views/wallet/WalletView.vue'),
+          meta: { permission: 'settings.general' }
         },
         {
           path: 'profile',
@@ -409,6 +453,11 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresAuth !== false) {
     if (!authStore.isAuthenticated) {
       return next({ name: 'login', query: { redirect: to.fullPath } })
+    }
+
+    // Owner Panel is restricted to super admins
+    if (to.meta.superAdmin && !authStore.user?.is_super_admin) {
+      return next({ path: getFirstAccessibleRoute(authStore) })
     }
 
     // Check permission-based access

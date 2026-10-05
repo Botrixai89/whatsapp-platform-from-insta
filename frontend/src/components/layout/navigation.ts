@@ -21,7 +21,13 @@ import {
   Tags,
   PhoneCall,
   PhoneForwarded,
-  ScrollText
+  ScrollText,
+  Crown,
+  Building2,
+  Package,
+  Receipt,
+  Wallet,
+  IndianRupee
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 
@@ -41,9 +47,23 @@ export interface NavSection {
   permissions: string[]
   /** Pin to bottom of sidebar */
   pinBottom?: boolean
+  /** Only shown to super admins (platform owner) */
+  superAdminOnly?: boolean
 }
 
 export const navigationSections: NavSection[] = [
+  {
+    label: 'nav.sectionOwner',
+    permissions: [],
+    superAdminOnly: true,
+    items: [
+      { name: 'nav.ownerDashboard', path: '/admin', icon: Crown },
+      { name: 'nav.clients', path: '/admin/clients', icon: Building2 },
+      { name: 'nav.plans', path: '/admin/plans', icon: Package },
+      { name: 'nav.rateCard', path: '/admin/rates', icon: IndianRupee },
+      { name: 'nav.transactions', path: '/admin/transactions', icon: Receipt },
+    ]
+  },
   {
     label: 'nav.sectionMain',
     permissions: ['analytics', 'chat'],
@@ -59,6 +79,12 @@ export const navigationSections: NavSection[] = [
         path: '/chat',
         icon: MessageSquare,
         permission: 'chat'
+      },
+      {
+        name: 'nav.wallet',
+        path: '/wallet',
+        icon: Wallet,
+        permission: 'settings.general'
       },
     ]
   },

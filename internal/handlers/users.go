@@ -244,6 +244,10 @@ func (a *App) CreateUser(r *fastglue.Request) error {
 		return nil
 	}
 
+	if err := a.Billing.CheckLimit(orgID, "users"); sendBillingError(r, err) {
+		return nil
+	}
+
 	// Validate required fields
 	if req.Email == "" || req.Password == "" || req.FullName == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Email, password, and full_name are required", nil, "")

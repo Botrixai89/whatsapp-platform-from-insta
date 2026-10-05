@@ -563,6 +563,10 @@ func (a *App) AddOrganizationMember(r *fastglue.Request) error {
 		return nil
 	}
 
+	if err := a.Billing.CheckLimit(orgID, "users"); sendBillingError(r, err) {
+		return nil
+	}
+
 	// Resolve target user by user_id or email
 	var targetUser models.User
 	if req.UserID != uuid.Nil {

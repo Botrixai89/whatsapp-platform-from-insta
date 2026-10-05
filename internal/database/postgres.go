@@ -115,6 +115,13 @@ func GetMigrationModels() []MigrationModel {
 		{"CallTransfer", &models.CallTransfer{}},
 		{"CallPermission", &models.CallPermission{}},
 		{"AuditLog", &models.AuditLog{}},
+
+		// Owner Panel & Billing
+		{"Plan", &models.Plan{}},
+		{"Wallet", &models.Wallet{}},
+		{"WalletTransaction", &models.WalletTransaction{}},
+		{"MessageCharge", &models.MessageCharge{}},
+		{"MessageRate", &models.MessageRate{}},
 	}
 }
 
@@ -240,6 +247,10 @@ func getIndexes() []string {
 		// Indexes
 		`CREATE INDEX IF NOT EXISTS idx_messages_contact_created ON messages(contact_id, created_at DESC)`,
 		`CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)`,
+		// Per-client usage queries in the Owner Panel
+		`CREATE INDEX IF NOT EXISTS idx_messages_org_created ON messages(organization_id, created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_wallet_tx_org_created ON wallet_transactions(organization_id, created_at DESC)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_message_rates_scope ON message_rates(COALESCE(organization_id, '00000000-0000-0000-0000-000000000000'::uuid), country_code, category) WHERE deleted_at IS NULL`,
 		// Partial index for per-contact unread counts in the contact list
 		`CREATE INDEX IF NOT EXISTS idx_messages_contact_unread ON messages(contact_id) WHERE direction = 'incoming' AND status <> 'read' AND deleted_at IS NULL`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_org_phone ON contacts(organization_id, phone_number)`,

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/shridarpatil/whatomate/internal/assignment"
+	"github.com/shridarpatil/whatomate/internal/billing"
 	"github.com/shridarpatil/whatomate/internal/calling"
 	"github.com/shridarpatil/whatomate/internal/config"
 	"github.com/shridarpatil/whatomate/internal/queue"
@@ -42,6 +43,8 @@ type App struct {
 	TTS *tts.PiperTTS
 	// S3Client for serving call recording presigned URLs (nil when not configured)
 	S3Client *storage.S3Client
+	// Billing manages client wallets and per-message charges
+	Billing *billing.Service
 	// wg tracks background goroutines for graceful shutdown
 	wg sync.WaitGroup
 }

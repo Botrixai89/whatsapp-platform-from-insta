@@ -93,6 +93,14 @@ type Organization struct {
 	Slug     string `gorm:"size:100;uniqueIndex;not null" json:"slug"`
 	Settings JSONB  `gorm:"type:jsonb;default:'{}'" json:"settings"`
 
+	// Owner Panel fields
+	Status          string     `gorm:"size:20;default:'active'" json:"status"` // active, suspended
+	SuspendedReason string     `gorm:"type:text" json:"suspended_reason,omitempty"`
+	PlanID          *uuid.UUID `gorm:"type:uuid;index" json:"plan_id,omitempty"`
+	PlanExpiresAt   *time.Time `json:"plan_expires_at,omitempty"`
+	ContactPhone    string     `gorm:"size:30" json:"contact_phone,omitempty"`
+	Notes           string     `gorm:"type:text" json:"notes,omitempty"`
+
 	// Relations
 	Users             []User             `gorm:"foreignKey:OrganizationID" json:"users,omitempty"`
 	UserOrganizations []UserOrganization `gorm:"foreignKey:OrganizationID" json:"user_organizations,omitempty"`

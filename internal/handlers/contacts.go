@@ -698,6 +698,9 @@ func (a *App) SendMessage(r *fastglue.Request) error {
 
 	ctx := context.Background()
 	message, err := a.SendOutgoingMessage(ctx, msgReq, opts)
+	if sendBillingError(r, err) {
+		return nil
+	}
 	if err != nil {
 		a.Log.Error("Failed to send message", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to send message", nil, "")
@@ -883,6 +886,9 @@ func (a *App) SendMediaMessage(r *fastglue.Request) error {
 
 	ctx := context.Background()
 	message, err := a.SendOutgoingMessage(ctx, msgReq, opts)
+	if sendBillingError(r, err) {
+		return nil
+	}
 	if err != nil {
 		a.Log.Error("Failed to send message", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to send message", nil, "")

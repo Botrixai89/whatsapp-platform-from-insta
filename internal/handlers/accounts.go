@@ -96,6 +96,10 @@ func (a *App) CreateAccount(r *fastglue.Request) error {
 		return nil
 	}
 
+	if err := a.Billing.CheckLimit(orgID, "accounts"); sendBillingError(r, err) {
+		return nil
+	}
+
 	// Validate required fields
 	if req.Name == "" || req.PhoneID == "" || req.BusinessID == "" || req.AccessToken == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Name, phone_id, business_id, and access_token are required", nil, "")
@@ -618,6 +622,9 @@ func (a *App) ExchangeToken(r *fastglue.Request) error {
 
 	// 3. We can now create/update the account
 	account, phoneInfo, existingAccount, oldAccount, err := a.createOrUpdateAccount(ctx, orgID, phoneID, wabaID, name, req.WebhookVerifyToken, accessToken, appSecret)
+	if sendBillingError(r, err) {
+		return nil
+	}
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}
@@ -761,6 +768,13 @@ func (a *App) createOrUpdateAccount(ctx context.Context, orgID uuid.UUID, phoneI
 		existingAccount = true
 		temp := account
 		oldAccount = &temp
+	}
+
+	// Plan limit applies only to newly connected numbers, not reconnects
+	if !existingAccount {
+		if err := a.Billing.CheckLimit(orgID, "accounts"); err != nil {
+			return nil, nil, false, nil, err
+		}
 	}
 
 	// Fetch phone info from Meta using WhatsApp service unconditionally

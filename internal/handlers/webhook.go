@@ -379,6 +379,9 @@ func (a *App) processStatusUpdate(phoneNumberID string, status WebhookStatus) {
 
 	// Update messages table - this also handles campaign stats via incrementCampaignStat
 	a.updateMessageStatus(messageID, statusValue, status.Errors)
+
+	// Settle the wallet charge with Meta's pricing verdict
+	a.applyBillingStatus(phoneNumberID, status)
 }
 
 // statusPriority returns the priority of a status (higher = more progressed)

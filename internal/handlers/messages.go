@@ -145,6 +145,13 @@ func SLASendOptions() MessageSendOptions {
 // SendOutgoingMessage is the unified method for sending all types of WhatsApp messages.
 // It handles: text, media (image/video/audio/document), interactive (buttons/list/cta_url), and template messages.
 func (a *App) SendOutgoingMessage(ctx context.Context, req OutgoingMessageRequest, opts MessageSendOptions) (*models.Message, error) {
+	// 0. Wallet / plan checks (suspension, plan expiry, limits, balance)
+	if req.Account != nil && req.Contact != nil {
+		if err := a.Billing.CheckCanSend(req.Account.OrganizationID, req.Contact.PhoneNumber, templateCategory(req)); err != nil {
+			return nil, err
+		}
+	}
+
 	// 1. Create message record
 	msg := a.createOutgoingMessage(req, opts)
 
@@ -457,6 +464,9 @@ func (a *App) finalizeMessageSend(msg *models.Message, req OutgoingMessageReques
 		"whats_app_message_id": wamid,
 	})
 	a.Log.Info("Message sent", "message_id", msg.ID, "wa_message_id", wamid, "type", msg.MessageType)
+
+	// Debit the wallet in real time for billable (template) messages
+	a.chargeAfterSend(req, wamid)
 
 	// Dispatch webhook for successful send
 	if opts.DispatchWebhook {
@@ -976,6 +986,9 @@ func (a *App) SendTemplateMessage(r *fastglue.Request) error {
 
 	ctx := context.Background()
 	message, err := a.SendOutgoingMessage(ctx, msgReq, opts)
+	if sendBillingError(r, err) {
+		return nil
+	}
 	if err != nil {
 		a.Log.Error("Failed to send template message", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to send template message", nil, "")

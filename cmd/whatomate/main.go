@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/shridarpatil/whatomate/internal/billing"
 	"net/http"
 	"os"
 	"os/signal"
@@ -46,7 +47,7 @@ func main() {
 	case "worker":
 		runWorker(os.Args[2:])
 	case "version":
-		fmt.Printf("Whatomate %s (built %s)\n", Version, BuildTime)
+		fmt.Printf("BotrixAI %s (built %s)\n", Version, BuildTime)
 	case "help", "-h", "--help":
 		printUsage()
 	default:
@@ -57,7 +58,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`Whatomate - WhatsApp Business API Platform
+	fmt.Println(`BotrixAI - WhatsApp Business API Platform
 
 Usage:
   whatomate <command> [options]
@@ -110,7 +111,7 @@ func runServer(args []string) {
 		DefaultFields:   []any{"app", "whatomate"},
 	})
 
-	lo.Info("Starting Whatomate server...", "version", Version)
+	lo.Info("Starting BotrixAI server...", "version", Version)
 
 	// Load configuration
 	cfg, err := config.Load(*configPath)
@@ -207,6 +208,7 @@ func runServer(args []string) {
 		WSHub:      wsHub,
 		Queue:      jobQueue,
 		HTTPClient: httpClient,
+		Billing:    billing.New(db, cfg.Billing),
 	}
 
 	// Initialize S3 client for call recordings (optional)
@@ -264,7 +266,7 @@ func runServer(args []string) {
 		ReadTimeout:        time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout:       time.Duration(cfg.Server.WriteTimeout) * time.Second,
 		MaxRequestBodySize: 15 * 1024 * 1024,
-		Name:               "Whatomate",
+		Name:               "BotrixAI",
 	}
 
 	// Start server in goroutine
@@ -294,6 +296,8 @@ func runServer(args []string) {
 			if err != nil {
 				lo.Fatal("Failed to create worker", "error", err, "worker_num", i+1)
 			}
+			// Share the server's billing caches so owner changes apply instantly
+			w.Billing = app.Billing
 			workers = append(workers, w)
 
 			workerNum := i + 1
@@ -364,7 +368,7 @@ func runWorker(args []string) {
 		DefaultFields:   []any{"app", "whatomate-worker"},
 	})
 
-	lo.Info("Starting Whatomate worker...", "version", Version)
+	lo.Info("Starting BotrixAI worker...", "version", Version)
 
 	// Load configuration
 	cfg, err := config.Load(*configPath)
@@ -564,6 +568,9 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 		})
 	}
 
+	// Block suspended client organizations (Owner Panel)
+	g.Before(app.OrgStatusGuard)
+
 	// Role-based access control middleware
 	g.Before(func(r *fastglue.Request) *fastglue.Request {
 		method := string(r.RequestCtx.Method())
@@ -584,6 +591,29 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	g.PUT("/api/me/password", app.ChangePassword)
 	g.PUT("/api/me/availability", app.UpdateAvailability)
 	g.GET("/api/me/organizations", app.ListMyOrganizations)
+
+	// Wallet (current organization)
+	g.GET("/api/wallet", app.GetWallet)
+	g.GET("/api/wallet/transactions", app.ListWalletTransactions)
+	g.GET("/api/wallet/rates", app.ListWalletRates)
+
+	// Owner Panel (super admin only)
+	g.GET("/api/admin/stats", app.AdminGetStats)
+	g.GET("/api/admin/clients", app.AdminListClients)
+	g.POST("/api/admin/clients", app.AdminCreateClient)
+	g.GET("/api/admin/clients/{id}", app.AdminGetClient)
+	g.PUT("/api/admin/clients/{id}", app.AdminUpdateClient)
+	g.POST("/api/admin/clients/{id}/wallet", app.AdminAdjustWallet)
+	g.GET("/api/admin/clients/{id}/transactions", app.AdminListClientTransactions)
+	g.GET("/api/admin/transactions", app.AdminListTransactions)
+	g.GET("/api/admin/plans", app.AdminListPlans)
+	g.POST("/api/admin/plans", app.AdminCreatePlan)
+	g.PUT("/api/admin/plans/{id}", app.AdminUpdatePlan)
+	g.DELETE("/api/admin/plans/{id}", app.AdminDeletePlan)
+	g.GET("/api/admin/rates", app.AdminListRates)
+	g.POST("/api/admin/rates", app.AdminCreateRate)
+	g.PUT("/api/admin/rates/{id}", app.AdminUpdateRate)
+	g.DELETE("/api/admin/rates/{id}", app.AdminDeleteRate)
 
 	// User Management (admin only - enforced by middleware)
 	g.GET("/api/users", app.ListUsers)

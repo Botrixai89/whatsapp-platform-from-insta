@@ -26,7 +26,7 @@ func TestLoad_AppliesDefaultsForMissingFields(t *testing.T) {
 	cfg, err := config.Load(writeConfig(t, ""))
 	require.NoError(t, err)
 
-	assert.Equal(t, "Whatomate", cfg.App.Name)
+	assert.Equal(t, "BotrixAI", cfg.App.Name)
 	assert.Equal(t, "development", cfg.App.Environment)
 	assert.Equal(t, "0.0.0.0", cfg.Server.Host)
 	assert.Equal(t, 8080, cfg.Server.Port)
@@ -120,7 +120,7 @@ port = 8080
 func TestLoad_EmptyConfigPathStillLoadsDefaults(t *testing.T) {
 	cfg, err := config.Load("")
 	require.NoError(t, err)
-	assert.Equal(t, "Whatomate", cfg.App.Name)
+	assert.Equal(t, "BotrixAI", cfg.App.Name)
 	assert.Equal(t, 8080, cfg.Server.Port)
 }
 

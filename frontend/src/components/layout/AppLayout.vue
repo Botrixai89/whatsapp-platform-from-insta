@@ -6,7 +6,6 @@ import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-  MessageSquare,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -17,22 +16,27 @@ import { authService } from '@/services/api'
 import OrganizationSwitcher from './OrganizationSwitcher.vue'
 import UserMenu from './UserMenu.vue'
 import ActiveCallPanel from '@/components/calling/ActiveCallPanel.vue'
-import { ScrollToTop } from '@/components/shared'
+import { ScrollToTop, BrandLogo } from '@/components/shared'
 import { navigationSections, type NavSection } from './navigation'
+import { useWalletStore, formatMoney } from '@/stores/wallet'
+import { Wallet, AlertTriangle, Ban } from 'lucide-vue-next'
 
 useI18n() // Enable $t() in template
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const walletStore = useWalletStore()
 const isCollapsed = ref(false)
 const isMobileMenuOpen = ref(false)
+const showWallet = computed(() => walletStore.enabled && authStore.hasPermission('settings.general', 'read'))
 
 // Refresh user data and connect WebSocket on mount
 onMounted(() => {
   if (authStore.isAuthenticated) {
     // Fetch fresh permissions in background (non-destructive — interceptor handles 401)
     authStore.refreshUserData()
+    walletStore.startPolling()
 
     wsService.connect(async () => {
       try {
@@ -66,6 +70,8 @@ function filterItems(items: NavSection['items']) {
       const originalPath = item.path
       const isActive = originalPath === '/'
         ? route.name === 'dashboard'
+        : originalPath === '/admin'
+          ? route.path === '/admin'
         : originalPath === '/chat'
           ? route.name === 'chat' || route.name === 'chat-conversation'
           : route.path.startsWith(originalPath)
@@ -87,6 +93,7 @@ const navSections = computed(() => {
       items: filterItems(section.items)
     }))
     .filter(section => section.items.length > 0)
+    .filter(section => !section.superAdminOnly || authStore.user?.is_super_admin)
 })
 
 const mainSections = computed(() => navSections.value.filter(s => !s.pinBottom))
@@ -109,11 +116,8 @@ const handleLogout = async () => {
 
     <!-- Mobile header -->
     <header class="fixed top-0 left-0 right-0 z-50 flex h-12 items-center justify-between border-b border-white/[0.08] light:border-gray-200 bg-[#0a0a0b]/95 light:bg-white/95 backdrop-blur-sm px-3 md:hidden">
-      <RouterLink to="/" class="flex items-center gap-2">
-        <div class="h-7 w-7 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-          <MessageSquare class="h-4 w-4 text-white" />
-        </div>
-        <span class="font-semibold text-sm text-white light:text-gray-900">Whatomate</span>
+      <RouterLink to="/" class="flex items-center text-white light:text-gray-900">
+        <BrandLogo mark-class="h-6 w-6" text-class="font-semibold text-base" />
       </RouterLink>
       <Button
         variant="ghost"
@@ -149,16 +153,8 @@ const handleLogout = async () => {
     >
       <!-- Logo (hidden on mobile, shown in header instead) -->
       <div class="hidden md:flex h-12 items-center justify-between px-3 border-b border-white/[0.08] light:border-gray-200">
-        <RouterLink to="/" class="flex items-center gap-2">
-          <div class="h-7 w-7 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <MessageSquare class="h-4 w-4 text-white" />
-          </div>
-          <span
-            v-if="!isCollapsed"
-            class="font-semibold text-sm text-white light:text-gray-900"
-          >
-            Whatomate
-          </span>
+        <RouterLink to="/" class="flex items-center text-white light:text-gray-900">
+          <BrandLogo mark-class="h-6 w-6" :show-text="!isCollapsed" text-class="font-semibold text-base" />
         </RouterLink>
         <Button
           variant="ghost"
@@ -283,17 +279,46 @@ const handleLogout = async () => {
         </template>
       </div>
 
+      <!-- Wallet balance -->
+      <RouterLink
+        v-if="showWallet"
+        to="/wallet"
+        :class="[
+          'mx-2 mb-1 flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-medium border transition-colors',
+          walletStore.lowBalance
+            ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 light:text-amber-700'
+            : 'border-white/[0.08] text-white/70 hover:bg-white/[0.06] light:border-gray-200 light:text-gray-700 light:hover:bg-gray-50',
+          isCollapsed && 'md:justify-center md:px-2'
+        ]"
+        :title="$t('wallet.balance')"
+        @click="isMobileMenuOpen = false"
+      >
+        <Wallet class="h-4 w-4 shrink-0" />
+        <span :class="['tabular-nums truncate', isCollapsed && 'md:sr-only']">{{ formatMoney(walletStore.balance, walletStore.currency) }}</span>
+      </RouterLink>
+
       <!-- User Menu -->
       <UserMenu :collapsed="isCollapsed" @logout="handleLogout" />
     </aside>
 
     <!-- Main content -->
-    <main id="main-content" class="flex-1 overflow-hidden pt-12 md:pt-0 bg-[#0a0a0b] light:bg-gray-50" role="main">
-      <RouterView v-slot="{ Component, route: viewRoute }">
-        <Transition name="page" mode="out-in">
-          <component :is="Component" :key="viewRoute.meta.stableKey ? String(viewRoute.name) : viewRoute.path" />
-        </Transition>
-      </RouterView>
+    <main id="main-content" class="flex-1 flex flex-col overflow-hidden pt-12 md:pt-0 bg-[#0a0a0b] light:bg-gray-50" role="main">
+      <!-- Account status banners -->
+      <div v-if="walletStore.suspended" class="flex items-center gap-2 px-4 py-2 text-sm bg-red-500/15 text-red-300 light:text-red-700 border-b border-red-500/30">
+        <Ban class="h-4 w-4 shrink-0" />
+        <span>{{ $t('wallet.suspendedBanner') }}<template v-if="walletStore.summary?.suspended_reason"> — {{ walletStore.summary.suspended_reason }}</template></span>
+      </div>
+      <RouterLink v-else-if="showWallet && walletStore.lowBalance && !authStore.user?.is_super_admin" to="/wallet" class="flex items-center gap-2 px-4 py-2 text-sm bg-amber-500/15 text-amber-300 light:text-amber-700 border-b border-amber-500/30">
+        <AlertTriangle class="h-4 w-4 shrink-0" />
+        <span>{{ $t('wallet.lowBalanceBanner', { balance: formatMoney(walletStore.balance, walletStore.currency) }) }}</span>
+      </RouterLink>
+      <div class="flex-1 min-h-0">
+        <RouterView v-slot="{ Component, route: viewRoute }">
+          <Transition name="page" mode="out-in">
+            <component :is="Component" :key="viewRoute.meta.stableKey ? String(viewRoute.name) : viewRoute.path" />
+          </Transition>
+        </RouterView>
+      </div>
       <ActiveCallPanel />
       <ScrollToTop />
     </main>

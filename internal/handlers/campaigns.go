@@ -435,11 +435,23 @@ func (a *App) StartCampaign(r *fastglue.Request) error {
 	}
 
 	// Validate template still exists
+	var template models.Template
 	if campaign.TemplateID != uuid.Nil {
-		var template models.Template
 		if err := a.DB.Where("id = ? AND organization_id = ?", campaign.TemplateID, orgID).First(&template).Error; err != nil {
 			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Campaign template no longer exists", nil, "")
 		}
+	}
+
+	// Wallet / plan checks: the balance must cover every pending recipient
+	if err := a.Billing.CheckCanSend(orgID, "", ""); sendBillingError(r, err) {
+		return nil
+	}
+	phones := make([]string, len(recipients))
+	for i, rcpt := range recipients {
+		phones[i] = rcpt.PhoneNumber
+	}
+	if err := a.Billing.CheckBalanceFor(orgID, a.Billing.EstimateCost(orgID, phones, template.Category)); sendBillingError(r, err) {
+		return nil
 	}
 
 	// Update status to processing

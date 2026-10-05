@@ -1247,4 +1247,193 @@ export const ivrFlowsService = {
   getAudioUrl: (filename: string) => `${api.defaults.baseURL}/ivr-flows/audio/${encodeURIComponent(filename)}`
 }
 
+// ============================================================================
+// Wallet & Owner Panel
+// ============================================================================
+
+export interface Plan {
+  id: string
+  name: string
+  description: string
+  price: number
+  billing_cycle: 'monthly' | 'yearly'
+  max_users: number
+  max_accounts: number
+  max_monthly_messages: number
+  is_default: boolean
+  is_active: boolean
+  clients_count?: number
+  created_at?: string
+}
+
+export interface Wallet {
+  id: string
+  organization_id: string
+  balance: number
+  currency: string
+  credit_limit: number
+  low_balance_threshold: number
+  total_credited: number
+  total_spent: number
+}
+
+export interface WalletTransaction {
+  id: string
+  created_at: string
+  organization_id: string
+  organization_name?: string
+  type: 'credit' | 'debit'
+  amount: number
+  balance_after: number
+  source: string
+  category?: string
+  reference?: string
+  description: string
+}
+
+export interface MessageRate {
+  id: string
+  organization_id?: string | null
+  organization_name?: string
+  country_code: string
+  country_name: string
+  category: string
+  price: number
+}
+
+export interface CategorySpend {
+  category: string
+  count: number
+  amount: number
+}
+
+export interface PlanUsage {
+  plan: Plan | null
+  plan_expires_at: string | null
+  users: number
+  accounts: number
+  messages_this_month: number
+}
+
+export interface WalletSummary {
+  enabled: boolean
+  wallet: Wallet
+  low_balance: boolean
+  status: string
+  suspended_reason: string
+  usage: PlanUsage
+  spent_this_month: number
+  spend_by_category: CategorySpend[]
+}
+
+export interface AdminDailyPoint {
+  date: string
+  outgoing: number
+  incoming: number
+  spend: number
+  signups: number
+}
+
+export interface AdminClient {
+  id: string
+  name: string
+  slug: string
+  status: 'active' | 'suspended'
+  contact_phone: string
+  created_at: string
+  plan_id: string | null
+  plan_name: string
+  plan_expires_at: string | null
+  owner_name: string
+  owner_email: string
+  balance: number
+  currency: string
+  users_count: number
+  numbers_count: number
+  contacts_count: number
+  messages_month: number
+  spend_month: number
+  last_activity_at: string | null
+}
+
+export interface AdminClientDetail {
+  client: AdminClient
+  organization: { id: string; name: string; status: string; suspended_reason?: string; notes?: string; contact_phone?: string; plan_id?: string | null; plan_expires_at?: string | null }
+  wallet: Wallet
+  usage: PlanUsage
+  members: Array<{ id: string; user_id: string; email: string; full_name: string; role_name: string; is_active: boolean; created_at: string }>
+  numbers: Array<{ id: string; name: string; phone_id: string; business_id: string; status: string; created_at: string }>
+  daily: AdminDailyPoint[]
+  spend_by_category: CategorySpend[]
+  recent_transactions: WalletTransaction[]
+}
+
+export interface AdminStats {
+  total_clients: number
+  active_clients: number
+  suspended_clients: number
+  new_clients_this_month: number
+  total_users: number
+  total_numbers: number
+  total_contacts: number
+  messages_today: number
+  messages_sent_this_month: number
+  messages_received_this_month: number
+  total_wallet_balance: number
+  spend_this_month: number
+  spend_today: number
+  recharges_this_month: number
+  currency: string
+  billing_enabled: boolean
+  daily: AdminDailyPoint[]
+  top_clients: Array<{ id: string; name: string; spend: number; messages: number }>
+  low_balance_clients: Array<{ id: string; name: string; balance: number; low_balance_threshold: number }>
+}
+
+export interface TransactionListParams {
+  page?: number
+  limit?: number
+  type?: string
+  source?: string
+  organization_id?: string
+}
+
+export const walletService = {
+  get: () => api.get<{ data: WalletSummary }>('/wallet'),
+  transactions: (params?: TransactionListParams) =>
+    api.get<{ data: { transactions: WalletTransaction[]; total: number } }>('/wallet/transactions', { params }),
+  rates: () => api.get<{ data: { rates: MessageRate[] } }>('/wallet/rates'),
+}
+
+export const adminService = {
+  stats: () => api.get<{ data: AdminStats }>('/admin/stats'),
+  // Clients
+  listClients: (params?: { search?: string; status?: string; plan_id?: string; sort?: string; order?: string; page?: number; limit?: number }) =>
+    api.get<{ data: { clients: AdminClient[]; total: number } }>('/admin/clients', { params }),
+  getClient: (id: string) => api.get<{ data: AdminClientDetail }>(`/admin/clients/${id}`),
+  createClient: (data: { name: string; contact_phone?: string; owner_name: string; owner_email: string; owner_password: string; plan_id?: string; plan_expires_at?: string; initial_balance?: number }) =>
+    api.post<{ data: { id: string } }>('/admin/clients', data),
+  updateClient: (id: string, data: Partial<{ name: string; status: string; suspended_reason: string; plan_id: string; plan_expires_at: string; contact_phone: string; notes: string; credit_limit: number; low_balance_threshold: number }>) =>
+    api.put(`/admin/clients/${id}`, data),
+  adjustWallet: (id: string, data: { type: 'credit' | 'debit'; amount: number; source?: string; description?: string }) =>
+    api.post<{ data: { balance: number } }>(`/admin/clients/${id}/wallet`, data),
+  clientTransactions: (id: string, params?: TransactionListParams) =>
+    api.get<{ data: { transactions: WalletTransaction[]; total: number } }>(`/admin/clients/${id}/transactions`, { params }),
+  transactions: (params?: TransactionListParams) =>
+    api.get<{ data: { transactions: WalletTransaction[]; total: number } }>('/admin/transactions', { params }),
+  // Plans
+  listPlans: () => api.get<{ data: { plans: Plan[] } }>('/admin/plans'),
+  createPlan: (data: Partial<Plan>) => api.post<{ data: Plan }>('/admin/plans', data),
+  updatePlan: (id: string, data: Partial<Plan>) => api.put<{ data: Plan }>(`/admin/plans/${id}`, data),
+  deletePlan: (id: string) => api.delete(`/admin/plans/${id}`),
+  // Rate card
+  listRates: (params?: { organization_id?: string }) =>
+    api.get<{ data: { rates: MessageRate[]; currency: string } }>('/admin/rates', { params }),
+  createRate: (data: { organization_id?: string; country_code: string; country_name?: string; category: string; price: number }) =>
+    api.post<{ data: MessageRate }>('/admin/rates', data),
+  updateRate: (id: string, data: { organization_id?: string; country_code: string; country_name?: string; category: string; price: number }) =>
+    api.put<{ data: MessageRate }>(`/admin/rates/${id}`, data),
+  deleteRate: (id: string) => api.delete(`/admin/rates/${id}`),
+}
+
 export default api

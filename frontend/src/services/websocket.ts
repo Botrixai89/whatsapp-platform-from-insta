@@ -3,6 +3,7 @@ import { useTransfersStore } from '@/stores/transfers'
 import { useCallingStore } from '@/stores/calling'
 import { useAuthStore } from '@/stores/auth'
 import { useNotesStore } from '@/stores/notes'
+import { useWalletStore } from '@/stores/wallet'
 import { contactsService } from '@/services/api'
 import { toast } from 'vue-sonner'
 import router from '@/router'
@@ -63,6 +64,7 @@ const WS_TYPE_CAMPAIGN_STATS_UPDATE = 'campaign_stats_update'
 
 // Permission types
 const WS_TYPE_PERMISSIONS_UPDATED = 'permissions_updated'
+const WS_TYPE_WALLET_UPDATE = 'wallet_update'
 
 // Call types
 const WS_TYPE_CALL_INCOMING = 'call_incoming'
@@ -249,6 +251,9 @@ class WebSocketService {
           break
         case WS_TYPE_PERMISSIONS_UPDATED:
           this.handlePermissionsUpdated()
+          break
+        case WS_TYPE_WALLET_UPDATE:
+          useWalletStore().applyUpdate(message.payload)
           break
         case WS_TYPE_CALL_INCOMING:
           this.handleCallIncoming(message.payload)

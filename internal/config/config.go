@@ -29,6 +29,15 @@ type Config struct {
 	Cookie       CookieConfig       `koanf:"cookie"`
 	Calling      CallingConfig      `koanf:"calling"`
 	TTS          TTSConfig          `koanf:"tts"`
+	Billing      BillingConfig      `koanf:"billing"`
+}
+
+// BillingConfig controls the prepaid wallet that is debited per billable
+// WhatsApp message (see internal/billing).
+type BillingConfig struct {
+	Enabled             bool    `koanf:"enabled"`               // master switch for wallet checks and deductions
+	Currency            string  `koanf:"currency"`              // wallet currency code (e.g. INR, USD)
+	LowBalanceThreshold float64 `koanf:"low_balance_threshold"` // default low-balance alert level for new wallets
 }
 
 type TTSConfig struct {
@@ -227,7 +236,7 @@ func Load(configPath string) (*Config, error) {
 
 func setDefaults(cfg *Config) {
 	if cfg.App.Name == "" {
-		cfg.App.Name = "Whatomate"
+		cfg.App.Name = "BotrixAI"
 	}
 	if cfg.App.Environment == "" {
 		cfg.App.Environment = "development"
@@ -322,5 +331,9 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.Calling.TransferTimeoutSecs == 0 {
 		cfg.Calling.TransferTimeoutSecs = 120
+	}
+	// Billing defaults
+	if cfg.Billing.Currency == "" {
+		cfg.Billing.Currency = "INR"
 	}
 }

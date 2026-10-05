@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"github.com/shridarpatil/whatomate/internal/billing"
 	"github.com/shridarpatil/whatomate/internal/config"
 	"github.com/shridarpatil/whatomate/internal/contactutil"
 	"github.com/shridarpatil/whatomate/internal/models"
@@ -27,6 +28,7 @@ type Worker struct {
 	WhatsApp  *whatsapp.Client
 	Consumer  *queue.RedisConsumer
 	Publisher *queue.Publisher
+	Billing   *billing.Service
 }
 
 // Ensure Worker implements JobHandler interface
@@ -49,6 +51,7 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, log logf.Logger) (*
 		WhatsApp:  whatsapp.New(log),
 		Consumer:  consumer,
 		Publisher: publisher,
+		Billing:   billing.New(db, cfg.Billing),
 	}, nil
 }
 
@@ -107,6 +110,21 @@ func (w *Worker) HandleRecipientJob(ctx context.Context, job *queue.RecipientJob
 		return nil
 	}
 
+	// Wallet / plan checks. On failure the campaign is paused and the recipient
+	// stays pending, so resuming after a recharge picks up where it stopped.
+	category := ""
+	if campaign.Template != nil {
+		category = campaign.Template.Category
+	}
+	if err := w.Billing.CheckCanSend(job.OrganizationID, job.PhoneNumber, category); err != nil {
+		w.Log.Warn("Pausing campaign: billing check failed", "campaign_id", job.CampaignID, "reason", err.Error())
+		w.DB.Model(&models.BulkMessageCampaign{}).
+			Where("id = ? AND status = ?", job.CampaignID, models.CampaignStatusProcessing).
+			Update("status", models.CampaignStatusPaused)
+		w.publishCampaignStats(ctx, job.CampaignID, job.OrganizationID)
+		return nil
+	}
+
 	// Build recipient for sending
 	recipient := &models.BulkMessageRecipient{
 		PhoneNumber:    job.PhoneNumber,
@@ -155,6 +173,11 @@ func (w *Worker) HandleRecipientJob(ctx context.Context, job *queue.RecipientJob
 		message.Status = models.MessageStatusSent
 		w.updateRecipientStatus(job.RecipientID, models.MessageStatusSent, waMessageID, "")
 		w.incrementCampaignCount(job.CampaignID, "sent_count")
+
+		// Debit the wallet in real time
+		if _, err := w.Billing.ChargeOnSend(job.OrganizationID, waMessageID, job.PhoneNumber, category); err != nil {
+			w.Log.Error("Failed to charge wallet for campaign message", "error", err, "wamid", waMessageID)
+		}
 	}
 
 	// Save message record

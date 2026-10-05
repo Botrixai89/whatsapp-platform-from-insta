@@ -128,6 +128,12 @@ func runMigrations(db *gorm.DB) error {
 		&models.CallPermission{},
 		// Audit
 		&models.AuditLog{},
+		// Owner Panel & Billing
+		&models.Plan{},
+		&models.Wallet{},
+		&models.WalletTransaction{},
+		&models.MessageCharge{},
+		&models.MessageRate{},
 	)
 }
 
@@ -135,6 +141,12 @@ func runMigrations(db *gorm.DB) error {
 // Uses TRUNCATE CASCADE to handle foreign key constraints properly.
 func cleanupTables(db *gorm.DB) {
 	tables := []string{
+		// Billing tables
+		"message_charges",
+		"message_rates",
+		"wallet_transactions",
+		"wallets",
+		"plans",
 		// Dashboard tables
 		"widgets",
 		// Catalog tables
