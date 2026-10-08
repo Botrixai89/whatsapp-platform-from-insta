@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/websocket"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zerodha/logf"

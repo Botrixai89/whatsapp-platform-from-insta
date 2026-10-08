@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/audit"
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/audit"
-	"github.com/shridarpatil/whatomate/internal/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

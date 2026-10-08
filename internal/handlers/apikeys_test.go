@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/Botrixai89/botrixai/internal/handlers"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/handlers"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -146,8 +146,8 @@ func TestApp_CreateAPIKey(t *testing.T) {
 		assert.Equal(t, "My API Key", resp.Data.Name)
 		assert.NotEmpty(t, resp.Data.ID)
 		assert.NotEmpty(t, resp.Data.Key)
-		assert.True(t, len(resp.Data.Key) > 4, "key should have whm_ prefix plus random bytes")
-		assert.Equal(t, "whm_", resp.Data.Key[:4])
+		assert.True(t, len(resp.Data.Key) > 4, "key should have btx_ prefix plus random bytes")
+		assert.Equal(t, "btx_", resp.Data.Key[:4])
 		assert.NotEmpty(t, resp.Data.KeyPrefix)
 		assert.Equal(t, resp.Data.Key[4:20], resp.Data.KeyPrefix)
 		assert.NotEmpty(t, resp.Data.CreatedAt)
@@ -397,12 +397,12 @@ func TestApp_CreateAPIKey_KeyFormat(t *testing.T) {
 	require.NoError(t, err)
 
 	key := resp.Data.Key
-	// Key must start with "whm_"
+	// Key must start with "btx_"
 	assert.True(t, len(key) > 4, "key must be longer than prefix")
-	assert.Equal(t, "whm_", key[:4])
+	assert.Equal(t, "btx_", key[:4])
 
 	// After prefix: 16 random bytes = 32 hex characters, total = 36
-	assert.Len(t, key, 36, "whm_ (4) + 32 hex chars = 36 total")
+	assert.Len(t, key, 36, "btx_ (4) + 32 hex chars = 36 total")
 
 	// The hex part should be valid hex
 	hexPart := key[4:]

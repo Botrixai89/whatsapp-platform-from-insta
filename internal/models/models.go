@@ -6,9 +6,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/crypto"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/crypto"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 	"gorm.io/gorm"
 )
 

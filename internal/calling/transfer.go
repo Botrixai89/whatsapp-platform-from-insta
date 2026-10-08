@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/assignment"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/internal/websocket"
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
-	"github.com/shridarpatil/whatomate/internal/assignment"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/internal/websocket"
 )
 
 // initiateTransfer starts the transfer flow: puts caller on hold, notifies agents via WebSocket.

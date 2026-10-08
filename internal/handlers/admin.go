@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/billing"
+	"github.com/Botrixai89/botrixai/internal/database"
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/billing"
-	"github.com/shridarpatil/whatomate/internal/database"
-	"github.com/shridarpatil/whatomate/internal/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"golang.org/x/crypto/bcrypt"

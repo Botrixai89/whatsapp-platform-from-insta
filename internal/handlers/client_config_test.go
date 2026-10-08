@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shridarpatil/whatomate/test/testutil"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"

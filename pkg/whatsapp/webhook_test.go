@@ -3,7 +3,7 @@ package whatsapp_test
 import (
 	"testing"
 
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

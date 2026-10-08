@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
+	"github.com/Botrixai89/botrixai/internal/queue"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/queue"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 )
 
 // MockSentMessage records a message sent through the mock WhatsApp client.

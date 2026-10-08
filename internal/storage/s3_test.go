@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/storage"
+	"github.com/Botrixai89/botrixai/internal/config"
+	"github.com/Botrixai89/botrixai/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

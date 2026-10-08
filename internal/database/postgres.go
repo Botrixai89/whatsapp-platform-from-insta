@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/config"
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/models"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

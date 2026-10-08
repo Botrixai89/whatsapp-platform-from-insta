@@ -1,4 +1,4 @@
-module github.com/shridarpatil/whatomate
+module github.com/Botrixai89/botrixai
 
 go 1.26.0
 

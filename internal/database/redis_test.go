@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/database"
+	"github.com/Botrixai89/botrixai/internal/config"
+	"github.com/Botrixai89/botrixai/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

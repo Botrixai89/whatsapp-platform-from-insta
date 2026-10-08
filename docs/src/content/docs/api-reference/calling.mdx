@@ -7,10 +7,10 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Overview
 
-Whatomate provides WebRTC-based voice calling over WhatsApp. This page documents the **HTTP/REST** control-plane endpoints: browsing call logs and recordings, managing agent transfers, placing outgoing calls, and requesting call permission.
+BotrixAI provides WebRTC-based voice calling over WhatsApp. This page documents the **HTTP/REST** control-plane endpoints: browsing call logs and recordings, managing agent transfers, placing outgoing calls, and requesting call permission.
 
 <Aside type="note">
-  The real-time media negotiation (WebRTC SDP/ICE signalling, call ringing, and DTMF) happens over the WebSocket channel at `/ws`, not over REST. The endpoints below either return the SDP answer synchronously (outgoing calls and transfer connect) or read/mutate call state. See [Calling](/whatomate/features/calling) for the end-to-end architecture.
+  The real-time media negotiation (WebRTC SDP/ICE signalling, call ringing, and DTMF) happens over the WebSocket channel at `/ws`, not over REST. The endpoints below either return the SDP answer synchronously (outgoing calls and transfer connect) or read/mutate call state. See [Calling](/botrixai/features/calling) for the end-to-end architecture.
 </Aside>
 
 <Aside type="caution">
@@ -188,7 +188,7 @@ POST /api/call-logs/{id}/resume
 
 ## Call Transfers
 
-Call transfers move a live call from the IVR (or from another agent) to an agent or team. See [IVR Flows](/whatomate/api-reference/ivr-flows) for how transfers are triggered from a flow.
+Call transfers move a live call from the IVR (or from another agent) to an agent or team. See [IVR Flows](/botrixai/api-reference/ivr-flows) for how transfers are triggered from a flow.
 
 ### List Call Transfers
 
@@ -499,5 +499,5 @@ GET /api/calls/ice-servers
 
 ## See Also
 
-- [Calling](/whatomate/features/calling) - Voice calling architecture and configuration
-- [IVR Flows](/whatomate/api-reference/ivr-flows) - Build the IVR menus that route callers to agents
+- [Calling](/botrixai/features/calling) - Voice calling architecture and configuration
+- [IVR Flows](/botrixai/api-reference/ivr-flows) - Build the IVR menus that route callers to agents

@@ -1,4 +1,4 @@
-// Package testutil provides shared test utilities for the whatomate project.
+// Package testutil provides shared test utilities for the botrixai project.
 package testutil
 
 import (

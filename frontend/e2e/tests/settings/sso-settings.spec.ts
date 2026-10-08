@@ -11,7 +11,7 @@ import { SUPER_ADMIN } from '../../framework'
  *
  * IMPORTANT: Playwright's `request` fixture is the same APIRequestContext
  * for the whole test (beforeEach + body + afterEach). Calling api.login()
- * more than once on it would fail — the second call has the whm_access
+ * more than once on it would fail — the second call has the btx_access
  * cookie set, triggering CSRF middleware, which login itself doesn't
  * satisfy. So we log in exactly once in beforeEach and reuse the same
  * ApiHelper for cleanup.

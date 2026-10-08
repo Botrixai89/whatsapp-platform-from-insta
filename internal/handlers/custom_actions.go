@@ -14,9 +14,9 @@ import (
 
 	"fmt"
 
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/dop251/goja"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/contactutil"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/contactutil"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 )
 
 func redactURLForLog(raw string) string {

@@ -31,7 +31,7 @@ GET /api/templates
 Ordered by `created_at DESC`.
 
 <Aside type="caution">
-  Whatomate stores templates as **flat fields** (`header_type`, `header_content`, `body_content`,
+  BotrixAI stores templates as **flat fields** (`header_type`, `header_content`, `body_content`,
   `footer_content`, `buttons`, `sample_values`) — not as Meta's nested `components` array. The
   account is referenced by name via `whatsapp_account`; there is no `account_id`, and the filter
   parameter is `account`.
@@ -203,7 +203,7 @@ Send the request as `multipart/form-data`:
 
 ```bash
 curl -X POST "http://your-server:8080/api/templates/upload-media?account=main" \
-  -H "X-API-Key: whm_your_api_key" \
+  -H "X-API-Key: btx_your_api_key" \
   -F "file=@header.jpg"
 ```
 
@@ -222,7 +222,7 @@ curl -X POST "http://your-server:8080/api/templates/upload-media?account=main" \
 ```
 
 Set the returned `handle` as `header_content` when creating a template whose `header_type` is
-`IMAGE`, `VIDEO` or `DOCUMENT` — Whatomate wraps it into Meta's
+`IMAGE`, `VIDEO` or `DOCUMENT` — BotrixAI wraps it into Meta's
 `example.header_handle` on submission:
 
 ```json
@@ -239,16 +239,16 @@ Set the returned `handle` as `header_content` when creating a template whose `he
 
 ## Template Parts
 
-Meta's four components map onto flat fields in the Whatomate API:
+Meta's four components map onto flat fields in the BotrixAI API:
 
-| Meta component | Whatomate fields |
+| Meta component | BotrixAI fields |
 |-----------|-------------|
 | `HEADER` | `header_type` (`TEXT` \| `IMAGE` \| `DOCUMENT` \| `VIDEO` \| `NONE`) + `header_content` |
 | `BODY` | `body_content` |
 | `FOOTER` | `footer_content` |
 | `BUTTONS` | `buttons` |
 
-Whatomate assembles the Meta `components` payload itself when you submit the template.
+BotrixAI assembles the Meta `components` payload itself when you submit the template.
 
 ## Template Variables
 
@@ -292,7 +292,7 @@ When using named parameters, provide sample values with `param_name`:
 }
 ```
 
-You do not set `parameter_format` yourself — Whatomate detects non-numeric placeholders and sends
+You do not set `parameter_format` yourself — BotrixAI detects non-numeric placeholders and sends
 `parameter_format: "NAMED"` to Meta on submission.
 
 ### URL Button Parameters
@@ -313,7 +313,7 @@ Templates can include URL buttons with dynamic variables. For example, a "Track 
 }
 ```
 
-When sending a template with dynamic URL buttons, provide the dynamic values via the `button_params` field in the [Send Template Message](/whatomate/api-reference/messages/#send-template-message) endpoint. The key is the zero-based button index:
+When sending a template with dynamic URL buttons, provide the dynamic values via the `button_params` field in the [Send Template Message](/botrixai/api-reference/messages/#send-template-message) endpoint. The key is the zero-based button index:
 
 ```json
 {
@@ -324,7 +324,7 @@ When sending a template with dynamic URL buttons, provide the dynamic values via
 ```
 
 <Aside type="note">
-  Whatomate automatically detects if your template uses named parameters (non-numeric placeholders) and sets the appropriate format when submitting to Meta.
+  BotrixAI automatically detects if your template uses named parameters (non-numeric placeholders) and sets the appropriate format when submitting to Meta.
 </Aside>
 
 <Aside type="caution">

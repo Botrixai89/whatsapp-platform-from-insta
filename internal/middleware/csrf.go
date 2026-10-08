@@ -25,13 +25,13 @@ func CSRFProtection() fastglue.FastMiddleware {
 
 		// Skip if there is no access cookie — the auth middleware will reject
 		// the request with 401 anyway.
-		cookieVal := r.RequestCtx.Request.Header.Cookie("whm_access")
+		cookieVal := r.RequestCtx.Request.Header.Cookie("btx_access")
 		if len(cookieVal) == 0 {
 			return r
 		}
 
-		// Double-submit: compare whm_csrf cookie with X-CSRF-Token header.
-		csrfCookie := string(r.RequestCtx.Request.Header.Cookie("whm_csrf"))
+		// Double-submit: compare btx_csrf cookie with X-CSRF-Token header.
+		csrfCookie := string(r.RequestCtx.Request.Header.Cookie("btx_csrf"))
 		csrfHeader := string(r.RequestCtx.Request.Header.Peek("X-CSRF-Token"))
 
 		if csrfCookie == "" || csrfHeader == "" || csrfCookie != csrfHeader {

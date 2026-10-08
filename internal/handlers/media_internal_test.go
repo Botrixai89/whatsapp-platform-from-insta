@@ -3,8 +3,8 @@ package handlers
 import (
 	"testing"
 
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
+	appcrypto "github.com/Botrixai89/botrixai/internal/crypto"
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/google/uuid"
-	appcrypto "github.com/shridarpatil/whatomate/internal/crypto"
-	"github.com/shridarpatil/whatomate/internal/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"golang.org/x/oauth2"

@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/middleware"
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/middleware"
-	"github.com/shridarpatil/whatomate/internal/models"
 	"github.com/stretchr/testify/require"
 	"github.com/zerodha/fastglue"
 	"golang.org/x/crypto/bcrypt"
@@ -398,7 +398,7 @@ func GenerateTestRefreshToken(t *testing.T, user *models.User, secret string, ex
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "whatomate",
+			Issuer:    "botrixai",
 		},
 	}
 

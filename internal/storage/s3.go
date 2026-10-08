@@ -6,11 +6,11 @@ import (
 	"io"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/config"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/shridarpatil/whatomate/internal/config"
 )
 
 // S3Client provides upload and presigned URL operations for call recordings.

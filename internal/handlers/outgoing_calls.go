@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

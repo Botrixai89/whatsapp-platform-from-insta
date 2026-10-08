@@ -29,14 +29,14 @@ export interface Organization {
 }
 
 /**
- * Extract the whm_csrf cookie value from a response's Set-Cookie headers.
+ * Extract the btx_csrf cookie value from a response's Set-Cookie headers.
  * Playwright's APIRequestContext auto-persists cookies for subsequent requests,
  * but we need the CSRF token value to send as X-CSRF-Token header.
  */
 function extractCSRFToken(response: { headers: () => Record<string, string>; headersArray: () => Array<{ name: string; value: string }> }): string | null {
   const cookieHeaders = response.headersArray().filter(h => h.name.toLowerCase() === 'set-cookie')
   for (const header of cookieHeaders) {
-    const match = header.value.match(/whm_csrf=([^;]+)/)
+    const match = header.value.match(/btx_csrf=([^;]+)/)
     if (match) return match[1]
   }
   return null
@@ -56,13 +56,13 @@ export class ApiHelper {
   }
 
   async login(email: string, password: string): Promise<void> {
-    // If the shared request context already carries a whm_csrf cookie from a
+    // If the shared request context already carries a btx_csrf cookie from a
     // prior login (common in tests that reuse the same `request` fixture), the
     // backend's double-submit check rejects POST without a matching header.
     // Pre-seed the header from storageState if we don't have one yet.
     if (!this.csrfToken) {
       const state = await this.request.storageState()
-      const cookie = state.cookies.find((c: { name: string }) => c.name === 'whm_csrf')
+      const cookie = state.cookies.find((c: { name: string }) => c.name === 'btx_csrf')
       if (cookie) this.csrfToken = cookie.value
     }
     const response = await this.request.post(`${BASE_URL}/api/auth/login`, {
@@ -72,7 +72,7 @@ export class ApiHelper {
     if (!response.ok()) {
       throw new Error(`Login failed: ${await response.text()}`)
     }
-    // Cookies (whm_access, whm_refresh) are auto-persisted by Playwright.
+    // Cookies (btx_access, btx_refresh) are auto-persisted by Playwright.
     // Extract CSRF token for mutating requests.
     this.csrfToken = extractCSRFToken(response)
   }
@@ -89,7 +89,7 @@ export class ApiHelper {
     organization_id: string
   }): Promise<{ user: User }> {
     // CSRF header is required because the shared request context may carry a
-    // whm_csrf cookie from a prior login; the double-submit check will reject
+    // btx_csrf cookie from a prior login; the double-submit check will reject
     // the request otherwise.
     const response = await this.request.post(`${BASE_URL}/api/auth/register`, {
       headers: this.csrfHeaders,

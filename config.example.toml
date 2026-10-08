@@ -1,4 +1,4 @@
-# Whatomate Configuration
+# BotrixAI Configuration
 # Copy this to config.toml and update values
 #
 # For Docker: use "db" and "redis" as hostnames
@@ -21,9 +21,9 @@ allowed_origins = ""  # Comma-separated CORS origins (e.g., "https://app.example
 [database]
 host = "db"  # Use "localhost" for local development
 port = 5432
-user = "whatomate"
-password = "whatomate"
-name = "whatomate"
+user = "botrixai"
+password = "botrixai"
+name = "botrixai"
 ssl_mode = "disable"
 max_open_conns = 25
 max_idle_conns = 5

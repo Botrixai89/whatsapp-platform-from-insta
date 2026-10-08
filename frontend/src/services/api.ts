@@ -30,7 +30,7 @@ export function getRequestHeaders(opts?: { csrf?: boolean }): Record<string, str
     headers['X-Organization-ID'] = selectedOrgId
   }
   if (opts?.csrf) {
-    const csrfToken = getCookie('whm_csrf')
+    const csrfToken = getCookie('btx_csrf')
     if (csrfToken) {
       headers['X-CSRF-Token'] = csrfToken
     }
@@ -44,7 +44,7 @@ api.interceptors.request.use(
     // Add CSRF token on mutating requests (cookie-based auth sends cookies automatically)
     const method = (config.method || '').toUpperCase()
     if (method === 'POST' || method === 'PUT' || method === 'DELETE' || method === 'PATCH') {
-      const csrfToken = getCookie('whm_csrf')
+      const csrfToken = getCookie('btx_csrf')
       if (csrfToken) {
         config.headers['X-CSRF-Token'] = csrfToken
       }
@@ -86,7 +86,7 @@ async function refreshAccessToken(): Promise<void> {
     axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true })
 
   if (navigator.locks?.request) {
-    await navigator.locks.request('whm-token-refresh', async () => {
+    await navigator.locks.request('btx-token-refresh', async () => {
       await doRefresh()
     })
   } else {
@@ -123,7 +123,7 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        // Browser sends whm_refresh cookie automatically via withCredentials.
+        // Browser sends btx_refresh cookie automatically via withCredentials.
         // Serialized across tabs via Web Locks to avoid single-use-token races.
         await refreshAccessToken()
 

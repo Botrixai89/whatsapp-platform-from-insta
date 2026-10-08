@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/assignment"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/assignment"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"

@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"golang.org/x/crypto/bcrypt"
@@ -39,13 +39,13 @@ type APIKeyCreateResponse struct {
 	CreatedAt string     `json:"created_at"`
 }
 
-// generateAPIKey generates a random API key with whm_ prefix
+// generateAPIKey generates a random API key with btx_ prefix
 func generateAPIKey() (string, error) {
 	bytes := make([]byte, 16) // 32 hex chars
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
-	return "whm_" + hex.EncodeToString(bytes), nil
+	return "btx_" + hex.EncodeToString(bytes), nil
 }
 
 // ListAPIKeys returns all API keys for the organization
@@ -205,7 +205,7 @@ func (a *App) CreateAPIKey(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to create API key", nil, "")
 	}
 
-	// Extract prefix (first 16 chars after "whm_")
+	// Extract prefix (first 16 chars after "btx_")
 	keyPrefix := fullKey[4:20]
 
 	apiKey := models.APIKey{

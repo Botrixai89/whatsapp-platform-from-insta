@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/middleware"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/middleware"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -29,7 +29,7 @@ func generateRefreshTokenWithJTI(t *testing.T, secret string, user *models.User,
 			ID:        jti,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "whatomate",
+			Issuer:    "botrixai",
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -63,7 +63,7 @@ func TestApp_SwitchOrg_AccessTokenCarriesUserOrgRole(t *testing.T) {
 	require.NoError(t, app.SwitchOrg(req))
 	require.Equal(t, fasthttp.StatusOK, testutil.GetResponseStatusCode(req))
 
-	accessTokenStr := testutil.GetResponseCookie(req, "whm_access")
+	accessTokenStr := testutil.GetResponseCookie(req, "btx_access")
 	require.NotEmpty(t, accessTokenStr)
 
 	parsed, err := jwt.ParseWithClaims(accessTokenStr, &middleware.JWTClaims{}, func(token *jwt.Token) (any, error) {
@@ -100,7 +100,7 @@ func TestApp_Logout_ClearsCookiesAndReturnsOK(t *testing.T) {
 	require.NoError(t, app.Logout(req))
 	assert.Equal(t, fasthttp.StatusOK, testutil.GetResponseStatusCode(req))
 
-	for _, name := range []string{"whm_access", "whm_refresh", "whm_csrf"} {
+	for _, name := range []string{"btx_access", "btx_refresh", "btx_csrf"} {
 		var seen bool
 		for key := range req.RequestCtx.Response.Header.Cookies() {
 			if string(key) == name {
@@ -161,7 +161,7 @@ func TestApp_Logout_FromCookie(t *testing.T) {
 	token := generateRefreshTokenWithJTI(t, testutil.TestJWTSecret, user, jti, time.Hour)
 
 	req := testutil.NewRequest(t)
-	req.RequestCtx.Request.Header.SetCookie("whm_refresh", token)
+	req.RequestCtx.Request.Header.SetCookie("btx_refresh", token)
 	req.RequestCtx.Request.Header.SetContentType("application/json")
 
 	require.NoError(t, app.Logout(req))
@@ -271,7 +271,7 @@ func TestApp_RefreshToken_RotatesJTI_ReplayFails(t *testing.T) {
 	testutil.AssertErrorResponse(t, req2, fasthttp.StatusUnauthorized, "revoked")
 
 	// Rotated refresh token must have a different JTI.
-	newRefresh := testutil.GetResponseCookie(req1, "whm_refresh")
+	newRefresh := testutil.GetResponseCookie(req1, "btx_refresh")
 	require.NotEmpty(t, newRefresh)
 	parsed, err := jwt.ParseWithClaims(newRefresh, &middleware.JWTClaims{}, func(token *jwt.Token) (any, error) {
 		return []byte(testutil.TestJWTSecret), nil
@@ -295,7 +295,7 @@ func TestApp_RefreshToken_FromCookie(t *testing.T) {
 	token := generateRefreshTokenWithJTI(t, testutil.TestJWTSecret, user, jti, time.Hour)
 
 	req := testutil.NewRequest(t)
-	req.RequestCtx.Request.Header.SetCookie("whm_refresh", token)
+	req.RequestCtx.Request.Header.SetCookie("btx_refresh", token)
 	req.RequestCtx.Request.Header.SetContentType("application/json")
 
 	require.NoError(t, app.RefreshToken(req))

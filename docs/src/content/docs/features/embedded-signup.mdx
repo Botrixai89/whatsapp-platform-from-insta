@@ -5,11 +5,11 @@ description: Self-serve Meta onboarding — connect a WhatsApp Business Account 
 
 import { Card, CardGrid, Steps, Aside } from '@astrojs/starlight/components';
 
-Embedded Signup is the self-serve way to connect a WhatsApp Business Account (WABA) to Whatomate. Instead of manually copying a permanent access token, phone ID, and WABA ID out of the Meta dashboard, the user clicks a button, authenticates with Facebook in a popup, and Whatomate does the token exchange, discovery, subscription, and registration for them.
+Embedded Signup is the self-serve way to connect a WhatsApp Business Account (WABA) to BotrixAI. Instead of manually copying a permanent access token, phone ID, and WABA ID out of the Meta dashboard, the user clicks a button, authenticates with Facebook in a popup, and BotrixAI does the token exchange, discovery, subscription, and registration for them.
 
 ## What it is
 
-Embedded Signup wraps Meta's official onboarding flow (the **Facebook JS SDK** launching Meta's Embedded Signup dialog). The user grants your Meta app access to their WhatsApp Business Account and phone number; the SDK hands back a short-lived authorization **code**; Whatomate exchanges it for a **permanent access token**, discovers the WABA and phone number behind it, subscribes your app to the account's webhooks, and (for most numbers) registers the phone — all in one round trip.
+Embedded Signup wraps Meta's official onboarding flow (the **Facebook JS SDK** launching Meta's Embedded Signup dialog). The user grants your Meta app access to their WhatsApp Business Account and phone number; the SDK hands back a short-lived authorization **code**; BotrixAI exchanges it for a **permanent access token**, discovers the WABA and phone number behind it, subscribes your app to the account's webhooks, and (for most numbers) registers the phone — all in one round trip.
 
 <CardGrid>
   <Card title="No manual tokens" icon="approve-check">
@@ -45,7 +45,7 @@ config_id = ""   # WhatsApp Config ID for frontend login
 | `app_secret` | Your Meta App Secret. Used server-side to exchange the code for a token and to debug the token during discovery. Never sent to the frontend. |
 | `webhook_verify_token` | Default verify token for the `/api/webhook` endpoint; a per-account token is generated if you don't pass one. |
 
-See [Configuration](/whatomate/getting-started/configuration) for the full `[whatsapp]` block and environment-variable overrides.
+See [Configuration](/botrixai/getting-started/configuration) for the full `[whatsapp]` block and environment-variable overrides.
 
 <Aside type="note">
   These can also be set **per organization** — if an org's settings carry `meta_app_id`, `meta_config_id`, and an encrypted `meta_app_secret_encrypted`, those override the global `config.toml` values for that org. This lets different tenants onboard against different Meta apps.
@@ -107,17 +107,17 @@ POST /api/accounts/{id}/register
 If you omit the PIN, the server generates a secure random one. On success the account status flips to `active` and the PIN is returned so you can store it. This endpoint also requires **`accounts:write`**.
 
 <Aside type="caution">
-  Keep the registration PIN safe. It's the two-step-verification PIN for the phone number on the WhatsApp Cloud API and is required for future re-registration. Whatomate stores it encrypted.
+  Keep the registration PIN safe. It's the two-step-verification PIN for the phone number on the WhatsApp Cloud API and is required for future re-registration. BotrixAI stores it encrypted.
 </Aside>
 
 ## Coexistence (SMB / Business App mode)
 
-**Coexistence** lets a number that's still being used in the **WhatsApp Business mobile app** connect to the Cloud API at the same time — the small-business owner keeps chatting from their phone while Whatomate mirrors those conversations.
+**Coexistence** lets a number that's still being used in the **WhatsApp Business mobile app** connect to the Cloud API at the same time — the small-business owner keeps chatting from their phone while BotrixAI mirrors those conversations.
 
-During exchange-token, Whatomate inspects the phone number info from Meta and flags the account **`IsSMB`** when the number is on the Business App (`is_on_biz_app`) or its platform type is `SMB` / `SMB_CLOUD_API`. For these numbers:
+During exchange-token, BotrixAI inspects the phone number info from Meta and flags the account **`IsSMB`** when the number is on the Business App (`is_on_biz_app`) or its platform type is `SMB` / `SMB_CLOUD_API`. For these numbers:
 
 - **Registration is skipped.** SMB numbers are already registered through the Business App and don't support the two-step registration API — so both auto-registration and the manual `POST /api/accounts/{id}/register` set the account straight to `active` with **no PIN**.
-- **Messages mirror from the mobile app.** Conversations the owner has in the WhatsApp Business app appear in Whatomate, and vice versa.
+- **Messages mirror from the mobile app.** Conversations the owner has in the WhatsApp Business app appear in BotrixAI, and vice versa.
 
 <Aside type="note">
   Coexistence applies only when the connected number is on the WhatsApp Business app. A number provisioned directly on the Cloud API (not SMB) goes through normal registration with a PIN.
@@ -125,5 +125,5 @@ During exchange-token, Whatomate inspects the phone number info from Meta and fl
 
 ## Related
 
-- [Configuration](/whatomate/getting-started/configuration) — the `[whatsapp]` config block and env overrides
-- [Accounts API](/whatomate/api-reference/accounts) — account, exchange-token, and register endpoints
+- [Configuration](/botrixai/getting-started/configuration) — the `[whatsapp]` config block and env overrides
+- [Accounts API](/botrixai/api-reference/accounts) — account, exchange-token, and register endpoints

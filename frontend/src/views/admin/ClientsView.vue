@@ -17,7 +17,8 @@ import { formatMoney } from '@/stores/wallet'
 import { formatDate } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api-utils'
 import { toast } from 'vue-sonner'
-import { Building2, Plus, Eye, LogIn } from 'lucide-vue-next'
+import { Building2, Plus, Eye, LogIn, PlusCircle, MinusCircle } from 'lucide-vue-next'
+import WalletAdjustDialog from './WalletAdjustDialog.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -132,6 +133,16 @@ async function createClient() {
   }
 }
 
+// Quick wallet credit/debit from the list
+const walletOpen = ref(false)
+const walletType = ref<'credit' | 'debit'>('credit')
+const walletClient = ref<AdminClient | null>(null)
+function openWallet(client: AdminClient, type: 'credit' | 'debit') {
+  walletClient.value = client
+  walletType.value = type
+  walletOpen.value = true
+}
+
 function relative(date: string | null) {
   if (!date) return t('owner.never')
   return formatDate(date)
@@ -226,6 +237,8 @@ function relative(date: string | null) {
                 </template>
                 <template #cell-actions="{ item }">
                   <div class="flex items-center justify-end gap-1">
+                    <IconButton :icon="PlusCircle" :label="$t('owner.addFunds')" class="h-8 w-8 text-emerald-400" @click="openWallet(item, 'credit')" />
+                    <IconButton :icon="MinusCircle" :label="$t('owner.deduct')" class="h-8 w-8 text-red-400" @click="openWallet(item, 'debit')" />
                     <IconButton :icon="Eye" :label="$t('owner.viewDetails')" class="h-8 w-8" @click="router.push(`/admin/clients/${item.id}`)" />
                     <IconButton :icon="LogIn" :label="$t('owner.openAsClient')" class="h-8 w-8" @click="openAsClient(item.id)" />
                   </div>
@@ -239,6 +252,17 @@ function relative(date: string | null) {
         </div>
       </div>
     </ScrollArea>
+
+    <WalletAdjustDialog
+      v-if="walletClient"
+      v-model:open="walletOpen"
+      :org-id="walletClient.id"
+      :client-name="walletClient.name"
+      :type="walletType"
+      :balance="walletClient.balance"
+      :currency="walletClient.currency"
+      @done="fetchClients"
+    />
 
     <CrudFormDialog
       v-model:open="isDialogOpen"

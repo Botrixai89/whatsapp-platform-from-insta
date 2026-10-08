@@ -4,27 +4,27 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/shridarpatil/whatomate/internal/billing"
+	"github.com/Botrixai89/botrixai/internal/billing"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/assignment"
+	"github.com/Botrixai89/botrixai/internal/calling"
+	"github.com/Botrixai89/botrixai/internal/config"
+	"github.com/Botrixai89/botrixai/internal/database"
+	"github.com/Botrixai89/botrixai/internal/frontend"
+	"github.com/Botrixai89/botrixai/internal/handlers"
+	"github.com/Botrixai89/botrixai/internal/middleware"
+	"github.com/Botrixai89/botrixai/internal/queue"
+	"github.com/Botrixai89/botrixai/internal/storage"
+	"github.com/Botrixai89/botrixai/internal/tts"
+	"github.com/Botrixai89/botrixai/internal/websocket"
+	"github.com/Botrixai89/botrixai/internal/worker"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/redis/go-redis/v9"
-	"github.com/shridarpatil/whatomate/internal/assignment"
-	"github.com/shridarpatil/whatomate/internal/calling"
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/database"
-	"github.com/shridarpatil/whatomate/internal/frontend"
-	"github.com/shridarpatil/whatomate/internal/handlers"
-	"github.com/shridarpatil/whatomate/internal/middleware"
-	"github.com/shridarpatil/whatomate/internal/queue"
-	"github.com/shridarpatil/whatomate/internal/storage"
-	"github.com/shridarpatil/whatomate/internal/tts"
-	"github.com/shridarpatil/whatomate/internal/websocket"
-	"github.com/shridarpatil/whatomate/internal/worker"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
@@ -61,7 +61,7 @@ func printUsage() {
 	fmt.Println(`BotrixAI - WhatsApp Business API Platform
 
 Usage:
-  whatomate <command> [options]
+  botrixai <command> [options]
 
 Commands:
   server    Start the API server (with optional embedded workers)
@@ -79,16 +79,16 @@ Worker Options:
   -workers int      Number of workers to run (default 1)
 
 Examples:
-  whatomate server                     # API + 1 embedded worker
-  whatomate server -workers 0          # API only (no workers)
-  whatomate server -workers 4          # API + 4 embedded workers
-  whatomate server -migrate            # Run migrations and start server
-  whatomate worker -workers 4          # 4 workers only (no API)
+  botrixai server                     # API + 1 embedded worker
+  botrixai server -workers 0          # API only (no workers)
+  botrixai server -workers 4          # API + 4 embedded workers
+  botrixai server -migrate            # Run migrations and start server
+  botrixai worker -workers 4          # 4 workers only (no API)
 
 Deployment Scenarios:
-  All-in-one:    whatomate server
-  Separate:      whatomate server -workers 0  (on API server)
-                 whatomate worker -workers 4  (on worker server)`)
+  All-in-one:    botrixai server
+  Separate:      botrixai server -workers 0  (on API server)
+                 botrixai worker -workers 4  (on worker server)`)
 }
 
 // ============================================================================
@@ -108,7 +108,7 @@ func runServer(args []string) {
 		Level:           logf.DebugLevel,
 		EnableCaller:    true,
 		TimestampFormat: "2006-01-02 15:04:05",
-		DefaultFields:   []any{"app", "whatomate"},
+		DefaultFields:   []any{"app", "botrixai"},
 	})
 
 	lo.Info("Starting BotrixAI server...", "version", Version)
@@ -142,7 +142,7 @@ func runServer(args []string) {
 		lo = logf.New(logf.Opts{
 			Level:           logf.InfoLevel,
 			TimestampFormat: "2006-01-02 15:04:05",
-			DefaultFields:   []any{"app", "whatomate"},
+			DefaultFields:   []any{"app", "botrixai"},
 		})
 	}
 
@@ -365,7 +365,7 @@ func runWorker(args []string) {
 		Level:           logf.DebugLevel,
 		EnableCaller:    true,
 		TimestampFormat: "2006-01-02 15:04:05",
-		DefaultFields:   []any{"app", "whatomate-worker"},
+		DefaultFields:   []any{"app", "botrixai-worker"},
 	})
 
 	lo.Info("Starting BotrixAI worker...", "version", Version)
@@ -381,7 +381,7 @@ func runWorker(args []string) {
 		lo = logf.New(logf.Opts{
 			Level:           logf.InfoLevel,
 			TimestampFormat: "2006-01-02 15:04:05",
-			DefaultFields:   []any{"app", "whatomate-worker"},
+			DefaultFields:   []any{"app", "botrixai-worker"},
 		})
 	}
 

@@ -162,7 +162,7 @@ POST /api/messages/template
 
 ```bash
 curl -X POST "http://your-server:8080/api/messages/template" \
-  -H "X-API-Key: whm_your_api_key" \
+  -H "X-API-Key: btx_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
     "phone_number": "919876543210",
@@ -280,7 +280,7 @@ POST /api/messages/media
 
 <Aside type="caution">
   This endpoint takes **`multipart/form-data` with a file upload**, not JSON. There is no
-  `media_url` field — the file is uploaded to Whatomate, which then sends it to Meta.
+  `media_url` field — the file is uploaded to BotrixAI, which then sends it to Meta.
 </Aside>
 
 ### Form Fields
@@ -295,14 +295,14 @@ POST /api/messages/media
 
 ```bash
 curl -X POST "http://your-server:8080/api/messages/media" \
-  -H "X-API-Key: whm_your_api_key" \
+  -H "X-API-Key: btx_your_api_key" \
   -F "contact_id=<uuid>" \
   -F "type=image" \
   -F "caption=Check out this product!" \
   -F "file=@./product.jpg"
 ```
 
-Meta's own size limits apply (roughly 5 MB images, 16 MB audio/video, 100 MB documents); Whatomate
+Meta's own size limits apply (roughly 5 MB images, 16 MB audio/video, 100 MB documents); BotrixAI
 does not enforce its own cap.
 
 ### Response
@@ -353,7 +353,7 @@ Send a message with up to 3 quick reply buttons:
 
 ```bash
 curl -X POST "http://your-server:8080/api/contacts/{contact_id}/messages" \
-  -H "X-API-Key: whm_your_api_key" \
+  -H "X-API-Key: btx_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "interactive",
@@ -388,7 +388,7 @@ Send a message with a call-to-action URL button:
 
 ```bash
 curl -X POST "http://your-server:8080/api/contacts/{contact_id}/messages" \
-  -H "X-API-Key: whm_your_api_key" \
+  -H "X-API-Key: btx_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "interactive",

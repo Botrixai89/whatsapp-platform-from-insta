@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
-	"github.com/shridarpatil/whatomate/test/testutil"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

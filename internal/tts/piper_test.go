@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/shridarpatil/whatomate/internal/tts"
+	"github.com/Botrixai89/botrixai/internal/tts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

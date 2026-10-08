@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 )
 
 // runIVRFlow parses the IVR flow graph and executes the node loop.

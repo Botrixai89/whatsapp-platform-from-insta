@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { PageHeader, ErrorState, DataTable, type Column } from '@/components/shared'
 import TransactionsTable from './TransactionsTable.vue'
+import WalletAdjustDialog from './WalletAdjustDialog.vue'
 import { adminService, type AdminClientDetail, type Plan } from '@/services/api'
 import { useOpenAsClient } from '@/composables/useOpenAsClient'
 import { formatMoney } from '@/stores/wallet'
@@ -127,32 +128,16 @@ async function changeStatus() {
 
 // Wallet adjust
 const walletDialogOpen = ref(false)
-const walletForm = ref<{ type: 'credit' | 'debit'; amount: number; source: string; description: string }>({ type: 'credit', amount: 0, source: 'recharge', description: '' })
-const isAdjusting = ref(false)
+const walletType = ref<'credit' | 'debit'>('credit')
 
 function openWallet(type: 'credit' | 'debit') {
-  walletForm.value = { type, amount: 0, source: type === 'credit' ? 'recharge' : 'manual', description: '' }
+  walletType.value = type
   walletDialogOpen.value = true
 }
 
-async function adjustWallet() {
-  const amount = Number(walletForm.value.amount)
-  if (!amount || amount <= 0) {
-    toast.error(t('owner.amountRequired'))
-    return
-  }
-  isAdjusting.value = true
-  try {
-    await adminService.adjustWallet(clientId.value, { ...walletForm.value, amount })
-    toast.success(walletForm.value.type === 'credit' ? t('owner.walletCredited') : t('owner.walletDebited'))
-    walletDialogOpen.value = false
-    await load()
-    txTable.value?.reload()
-  } catch (e) {
-    toast.error(getErrorMessage(e, t('owner.walletAdjustFailed')))
-  } finally {
-    isAdjusting.value = false
-  }
+async function onWalletAdjusted() {
+  await load()
+  txTable.value?.reload()
 }
 
 // Usage
@@ -416,42 +401,14 @@ const numberColumns = computed<Column<any>[]>(() => [
       </div>
     </ScrollArea>
 
-    <!-- Wallet adjust dialog -->
-    <Dialog v-model:open="walletDialogOpen">
-      <DialogContent class="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{{ walletForm.type === 'credit' ? $t('owner.addFunds') : $t('owner.deduct') }}</DialogTitle>
-          <DialogDescription>{{ $t('owner.currentBalance', { v: money(detail?.wallet.balance || 0) }) }}</DialogDescription>
-        </DialogHeader>
-        <div class="space-y-4">
-          <div class="space-y-2">
-            <Label>{{ $t('owner.amount') }} ({{ currency }})</Label>
-            <Input v-model.number="walletForm.amount" type="number" min="0" step="0.01" autofocus />
-          </div>
-          <div v-if="walletForm.type === 'credit'" class="space-y-2">
-            <Label>{{ $t('owner.source') }}</Label>
-            <Select v-model="walletForm.source">
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recharge">{{ $t('owner.sourceRecharge') }}</SelectItem>
-                <SelectItem value="bonus">{{ $t('owner.sourceBonus') }}</SelectItem>
-                <SelectItem value="manual">{{ $t('owner.sourceManual') }}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div class="space-y-2">
-            <Label>{{ $t('owner.noteOptional') }}</Label>
-            <Input v-model="walletForm.description" :placeholder="$t('owner.notePlaceholder')" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" @click="walletDialogOpen = false">{{ $t('common.cancel') }}</Button>
-          <Button :disabled="isAdjusting" @click="adjustWallet">
-            <Loader2 v-if="isAdjusting" class="h-4 w-4 mr-2 animate-spin" />{{ $t('common.confirm') }}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <WalletAdjustDialog
+      v-model:open="walletDialogOpen"
+      :org-id="clientId"
+      :type="walletType"
+      :balance="detail?.wallet.balance || 0"
+      :currency="currency"
+      @done="onWalletAdjusted"
+    />
 
     <!-- Suspend / activate dialog -->
     <Dialog v-model:open="statusDialogOpen">

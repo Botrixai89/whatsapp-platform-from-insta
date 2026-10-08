@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shridarpatil/whatomate/internal/config"
+	"github.com/Botrixai89/botrixai/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,8 +102,8 @@ secure = false
 }
 
 func TestLoad_EnvVarsOverrideFile(t *testing.T) {
-	t.Setenv("WHATOMATE_DATABASE__HOST", "from-env")
-	t.Setenv("WHATOMATE_SERVER__PORT", "1234")
+	t.Setenv("BOTRIXAI_DATABASE__HOST", "from-env")
+	t.Setenv("BOTRIXAI_SERVER__PORT", "1234")
 
 	cfg, err := config.Load(writeConfig(t, `
 [database]
@@ -113,8 +113,8 @@ host = "from-file"
 port = 8080
 `))
 	require.NoError(t, err)
-	assert.Equal(t, "from-env", cfg.Database.Host, "WHATOMATE_DATABASE__HOST must override file")
-	assert.Equal(t, 1234, cfg.Server.Port, "WHATOMATE_SERVER__PORT must override file")
+	assert.Equal(t, "from-env", cfg.Database.Host, "BOTRIXAI_DATABASE__HOST must override file")
+	assert.Equal(t, 1234, cfg.Server.Port, "BOTRIXAI_SERVER__PORT must override file")
 }
 
 func TestLoad_EmptyConfigPathStillLoadsDefaults(t *testing.T) {
@@ -179,16 +179,16 @@ func TestResolveCredentials_DefaultsTTLWhenUnset(t *testing.T) {
 }
 
 // TestLoad_EnvMapsMultiWordKeys is the regression for the embedded-signup bug
-// (whatomate#476): env vars for keys whose section OR field name contains an
+// (botrixai#476): env vars for keys whose section OR field name contains an
 // underscore must map correctly. Levels are separated by "__"; single
 // underscores stay part of the key. This exercises config.Load()'s env path,
 // which the handler-level tests bypass by setting the struct directly.
 func TestLoad_EnvMapsMultiWordKeys(t *testing.T) {
-	t.Setenv("WHATOMATE_WHATSAPP__APP_ID", "env-app-id")
-	t.Setenv("WHATOMATE_WHATSAPP__CONFIG_ID", "env-config-id")
-	t.Setenv("WHATOMATE_WHATSAPP__API_VERSION", "v21.0")
-	t.Setenv("WHATOMATE_DEFAULT_ADMIN__EMAIL", "admin@example.com")
-	t.Setenv("WHATOMATE_DATABASE__HOST", "db.internal")
+	t.Setenv("BOTRIXAI_WHATSAPP__APP_ID", "env-app-id")
+	t.Setenv("BOTRIXAI_WHATSAPP__CONFIG_ID", "env-config-id")
+	t.Setenv("BOTRIXAI_WHATSAPP__API_VERSION", "v21.0")
+	t.Setenv("BOTRIXAI_DEFAULT_ADMIN__EMAIL", "admin@example.com")
+	t.Setenv("BOTRIXAI_DATABASE__HOST", "db.internal")
 
 	cfg, err := config.Load("") // no file; env-only
 	require.NoError(t, err)

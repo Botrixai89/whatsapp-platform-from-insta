@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/middleware"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/middleware"
-	"github.com/shridarpatil/whatomate/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"

@@ -10,8 +10,8 @@ import (
 	"github.com/zerodha/fastglue"
 	"gorm.io/gorm"
 
-	"github.com/shridarpatil/whatomate/internal/audit"
-	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/Botrixai89/botrixai/internal/audit"
+	"github.com/Botrixai89/botrixai/internal/models"
 )
 
 // errEnvelopeSent is a sentinel returned by helpers after they have already

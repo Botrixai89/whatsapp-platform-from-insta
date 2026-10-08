@@ -1,6 +1,4 @@
-<a href="https://zerodha.tech"><img src="https://zerodha.tech/static/images/github-badge.svg" align="right" alt="Zerodha Tech Badge" /></a>
-
-# Whatomate
+# BotrixAI
 
 Modern, open-source WhatsApp Business Platform. Single binary app.
 
@@ -34,7 +32,7 @@ Modern, open-source WhatsApp Business Platform. Single binary app.
   Pre-defined quick replies with slash commands (`/shortcut`) and dynamic placeholders.
 
 - **Voice Calling & IVR**
-  Incoming and outgoing WhatsApp calls with IVR menus, DTMF routing, call transfers to agent teams, hold music, and call recording. See [calling docs](https://shridarpatil.github.io/whatomate/features/calling/).
+  Incoming and outgoing WhatsApp calls with IVR menus, DTMF routing, call transfers to agent teams, hold music, and call recording. See [calling docs](https://botrixai89.github.io/botrixai/features/calling/).
 
 - **Analytics Dashboard**
   Track messages, engagement, and campaign performance.
@@ -59,13 +57,13 @@ Modern, open-source WhatsApp Business Platform. Single binary app.
 
 ### Docker
 
-The latest image is available on Docker Hub at [`shridh0r/whatomate:latest`](https://hub.docker.com/r/shridh0r/whatomate)
+The latest image is available on Docker Hub at [`botrixai/botrixai:latest`](https://hub.docker.com/r/botrixai/botrixai)
 
 ```bash
 # Download compose file, sample config, and env file
-curl -LO https://raw.githubusercontent.com/shridarpatil/whatomate/main/docker/docker-compose.yml
-curl -LO https://raw.githubusercontent.com/shridarpatil/whatomate/main/config.example.toml
-curl -L https://raw.githubusercontent.com/shridarpatil/whatomate/main/docker/.env.example -o .env
+curl -LO https://raw.githubusercontent.com/Botrixai89/whatsapp-platform-from-insta/main/docker/docker-compose.yml
+curl -LO https://raw.githubusercontent.com/Botrixai89/whatsapp-platform-from-insta/main/config.example.toml
+curl -L https://raw.githubusercontent.com/Botrixai89/whatsapp-platform-from-insta/main/docker/.env.example -o .env
 
 # Copy and edit config
 cp config.example.toml config.toml
@@ -81,14 +79,14 @@ __________________
 
 ### Binary
 
-Download the [latest release](https://github.com/shridarpatil/whatomate/releases) and extract the binary.
+Download the [latest release](https://github.com/Botrixai89/whatsapp-platform-from-insta/releases) and extract the binary.
 
 ```bash
 # Copy and edit config
 cp config.example.toml config.toml
 
 # Run with migrations
-./whatomate server -migrate
+./botrixai server -migrate
 ```
 
 Go to `http://localhost:8080` and login with `admin@admin.com` / `admin`
@@ -98,23 +96,23 @@ __________________
 ### Build from Source
 
 ```bash
-git clone https://github.com/shridarpatil/whatomate.git
-cd whatomate
+git clone https://github.com/Botrixai89/whatsapp-platform-from-insta.git
+cd whatsapp-platform-from-insta
 
 # Production build (single binary with embedded frontend)
 make build-prod
-./whatomate server -migrate
+./botrixai server -migrate
 ```
 
-See [configuration docs](https://shridarpatil.github.io/whatomate/getting-started/configuration/) for detailed setup options.
+See [configuration docs](https://botrixai89.github.io/botrixai/getting-started/configuration/) for detailed setup options.
 
 ## CLI Usage
 
 ```bash
-./whatomate server              # API + 1 worker (default)
-./whatomate server -workers=0   # API only
-./whatomate worker -workers=4   # Workers only (for scaling)
-./whatomate version             # Show version
+./botrixai server              # API + 1 worker (default)
+./botrixai server -workers=0   # API only
+./botrixai worker -workers=4   # Workers only (for scaling)
+./botrixai version             # Show version
 ```
 
 ## Developers
@@ -130,4 +128,8 @@ cd frontend && npm run dev   # Frontend (port 3000)
 
 ## License
 
-See [LICENSE](LICENSE) for details.
+BotrixAI is licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE) for details.
+
+## Credits
+
+BotrixAI is based on [Whatomate](https://github.com/shridarpatil/whatomate) by Shridar Patil, used under the AGPL-3.0 license.

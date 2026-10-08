@@ -2,14 +2,14 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 export default defineConfig({
-  site: 'https://shridarpatil.github.io',
-  base: '/whatomate',
+  site: 'https://botrixai89.github.io',
+  base: '/botrixai',
   integrations: [
     starlight({
-      title: 'Whatomate',
+      title: 'BotrixAI',
       description: 'A modern WhatsApp Business Platform',
       social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/shridarpatil/whatomate' },
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/Botrixai89/whatsapp-platform-from-insta' },
       ],
       sidebar: [
         {

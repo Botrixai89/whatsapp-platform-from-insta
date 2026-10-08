@@ -440,7 +440,7 @@ export class ApiKeysPage extends TableSettingsPage {
 
   async expectKeyCreatedDialog() {
     await expect(this.dialog).toContainText('API Key Created')
-    await expect(this.dialog).toContainText('whm_')
+    await expect(this.dialog).toContainText('btx_')
   }
 
   async closeKeyCreatedDialog() {

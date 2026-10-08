@@ -2,7 +2,7 @@ import { request } from '@playwright/test'
 import { cleanupE2EData } from './global-cleanup'
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8080'
-const DB_URL = process.env.TEST_DATABASE_URL || 'postgres://whatomate:whatomate@127.0.0.1:5432/whatomate'
+const DB_URL = process.env.TEST_DATABASE_URL || 'postgres://botrixai:botrixai@127.0.0.1:5432/botrixai'
 
 interface CreateUser {
   email: string
@@ -12,12 +12,12 @@ interface CreateUser {
 }
 
 /**
- * Extract the whm_csrf cookie value from Set-Cookie response headers.
+ * Extract the btx_csrf cookie value from Set-Cookie response headers.
  */
 function extractCSRFToken(response: { headersArray: () => Array<{ name: string; value: string }> }): string | null {
   const cookieHeaders = response.headersArray().filter(h => h.name.toLowerCase() === 'set-cookie')
   for (const header of cookieHeaders) {
-    const match = header.value.match(/whm_csrf=([^;]+)/)
+    const match = header.value.match(/btx_csrf=([^;]+)/)
     if (match) return match[1]
   }
   return null
@@ -53,7 +53,7 @@ async function globalSetup() {
       console.log(`  ✅ Logged in as superadmin: ${defaultAdmin.email}`)
     } else {
       console.log(`  ❌ Failed to login as superadmin: ${await loginResponse.text()}`)
-      console.log(`  ℹ️  Make sure migrations have run (./whatomate server -migrate)`)
+      console.log(`  ℹ️  Make sure migrations have run (./botrixai server -migrate)`)
     }
   } catch (error) {
     console.log(`  ❌ Error logging in as superadmin:`, error)

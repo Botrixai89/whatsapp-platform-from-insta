@@ -44,7 +44,7 @@ The list supports server-side search and tag filtering:
 - **Search** matches the contact's phone number or profile name (case-insensitive on the profile name).
 - **Tag filter** accepts a comma-separated list of tag names and returns contacts that have **any** of them (`?tags=vip,billing`).
 
-These map to the `search` and `tags` query parameters on `GET /api/contacts` — see the [Contacts API](/whatomate/api-reference/contacts).
+These map to the `search` and `tags` query parameters on `GET /api/contacts` — see the [Contacts API](/botrixai/api-reference/contacts).
 
 ### Unread counts
 
@@ -52,22 +52,22 @@ A conversation's unread count is the number of incoming messages whose status is
 
 ## The 24-hour service window
 
-WhatsApp enforces a **24-hour customer service window**. It opens each time the customer sends you a message and lasts 24 hours from that last inbound message. Whatomate tracks this per contact as `service_window_open` (true when the last inbound message was less than 24 hours ago).
+WhatsApp enforces a **24-hour customer service window**. It opens each time the customer sends you a message and lasts 24 hours from that last inbound message. BotrixAI tracks this per contact as `service_window_open` (true when the last inbound message was less than 24 hours ago).
 
 What the window controls:
 
 | Window state | What you can send |
 |---|---|
 | **Open** (customer messaged within 24h) | Free-form messages — text, media, interactive buttons, reactions. |
-| **Closed** (no inbound in 24h) | **Only pre-approved [message templates](/whatomate/features/templates).** Free-form messages will be rejected by Meta. |
+| **Closed** (no inbound in 24h) | **Only pre-approved [message templates](/botrixai/features/templates).** Free-form messages will be rejected by Meta. |
 
 <Aside type="note">
-  This is a WhatsApp Platform rule, not a Whatomate limitation. To re-open a conversation after the window closes, send an approved template; once the customer replies, the free-form window opens again.
+  This is a WhatsApp Platform rule, not a BotrixAI limitation. To re-open a conversation after the window closes, send an approved template; once the customer replies, the free-form window opens again.
 </Aside>
 
 ## Permission-scoped visibility
 
-What a user sees in the inbox depends on their [role's permissions](/whatomate/features/roles-permissions):
+What a user sees in the inbox depends on their [role's permissions](/botrixai/features/roles-permissions):
 
 - **With `chat:read`** — the user can open conversations. Combined with **`contacts:read`**, they see **every** conversation in the organization.
 - **Without `contacts:read`** — visibility is narrowed to conversations the user *owns*: contacts **assigned to them** (`assigned_user_id`), plus contacts with an **active agent transfer** to them. This scoping is applied uniformly to listing, reading, messaging, reactions, and notes — an agent cannot read or reply to a conversation they don't own.
@@ -115,12 +115,12 @@ The chat send endpoint also sends interactive messages via the `interactive` fie
 | **button** | Up to a few tappable quick-reply buttons under a body text. |
 | **list** | A list-style picker of options. |
 | **cta_url** | A single call-to-action button that opens a URL. |
-| **voice_call** | A WhatsApp [Business Calling](/whatomate/features/calling) button that lets the customer call you. Requires the account to have Business Calling enabled. |
-| **flow** | Launches a [WhatsApp Flow](/whatomate/features/whatsapp-flows) form. The `flow_id` must belong to your organization. |
+| **voice_call** | A WhatsApp [Business Calling](/botrixai/features/calling) button that lets the customer call you. Requires the account to have Business Calling enabled. |
+| **flow** | Launches a [WhatsApp Flow](/botrixai/features/whatsapp-flows) form. The `flow_id` must belong to your organization. |
 
 ### Templates
 
-When the service window is closed — or for any structured, pre-approved outreach — send an approved [template](/whatomate/features/templates) via `POST /api/messages/template`. You supply the template name or ID plus its body/header/button parameters. The send is rejected if the template isn't `APPROVED`, if required parameters are missing, or if the contact has opted out of marketing and the template is a `MARKETING` template. See the [Messages API](/whatomate/api-reference/messages) for the full parameter list.
+When the service window is closed — or for any structured, pre-approved outreach — send an approved [template](/botrixai/features/templates) via `POST /api/messages/template`. You supply the template name or ID plus its body/header/button parameters. The send is rejected if the template isn't `APPROVED`, if required parameters are missing, or if the contact has opted out of marketing and the template is a `MARKETING` template. See the [Messages API](/botrixai/api-reference/messages) for the full parameter list.
 
 ### Reactions
 
@@ -139,10 +139,10 @@ Opening a conversation should mark its incoming messages read to clear the unrea
 POST /api/contacts/{id}/mark-read
 ```
 
-This flips the contact's incoming messages to `read`. If the sending account has **auto read receipts** enabled, Whatomate also sends read receipts (the blue ticks) back to the customer over the WhatsApp API.
+This flips the contact's incoming messages to `read`. If the sending account has **auto read receipts** enabled, BotrixAI also sends read receipts (the blue ticks) back to the customer over the WhatsApp API.
 
 <Aside type="tip">
-  Canned responses speed up repetitive replies — type `/shortcut` in the chat input to insert a pre-written message. See [Canned Responses](/whatomate/features/canned-responses).
+  Canned responses speed up repetitive replies — type `/shortcut` in the chat input to insert a pre-written message. See [Canned Responses](/botrixai/features/canned-responses).
 </Aside>
 
 ## Private conversation notes
@@ -204,8 +204,8 @@ The inbox is driven by the WebSocket hub: new inbound and outbound messages, sta
 
 ## Related
 
-- [Canned Responses](/whatomate/features/canned-responses) — quick replies and slash commands
-- [Templates](/whatomate/features/templates) — pre-approved messages for the closed service window
-- [Roles & Permissions](/whatomate/features/roles-permissions) — the `chat`, `chat.assign`, `contacts`, and `tags` permissions
-- [Contacts API](/whatomate/api-reference/contacts) — contact, assignment, tags, and notes endpoints
-- [Messages API](/whatomate/api-reference/messages) — send text, media, templates, and reactions
+- [Canned Responses](/botrixai/features/canned-responses) — quick replies and slash commands
+- [Templates](/botrixai/features/templates) — pre-approved messages for the closed service window
+- [Roles & Permissions](/botrixai/features/roles-permissions) — the `chat`, `chat.assign`, `contacts`, and `tags` permissions
+- [Contacts API](/botrixai/api-reference/contacts) — contact, assignment, tags, and notes endpoints
+- [Messages API](/botrixai/api-reference/messages) — send text, media, templates, and reactions

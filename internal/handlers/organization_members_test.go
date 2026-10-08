@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/Botrixai89/botrixai/internal/handlers"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/handlers"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -649,10 +649,10 @@ func TestApp_SwitchOrg_Success(t *testing.T) {
 	assert.Equal(t, fasthttp.StatusOK, testutil.GetResponseStatusCode(req))
 
 	// Tokens are now in httpOnly cookies, not in the response body
-	accessCookie := testutil.GetResponseCookie(req, "whm_access")
-	refreshCookie := testutil.GetResponseCookie(req, "whm_refresh")
-	assert.NotEmpty(t, accessCookie, "whm_access cookie should be set")
-	assert.NotEmpty(t, refreshCookie, "whm_refresh cookie should be set")
+	accessCookie := testutil.GetResponseCookie(req, "btx_access")
+	refreshCookie := testutil.GetResponseCookie(req, "btx_refresh")
+	assert.NotEmpty(t, accessCookie, "btx_access cookie should be set")
+	assert.NotEmpty(t, refreshCookie, "btx_refresh cookie should be set")
 
 	var resp struct {
 		Data struct {

@@ -48,7 +48,7 @@ test.describe('API Keys Management', () => {
     // Should show the key display dialog with the full key
     const keyDialog = page.locator('[role="dialog"]')
     await expect(keyDialog).toBeVisible({ timeout: 10000 })
-    await expect(keyDialog.locator('text=whm_')).toBeVisible()
+    await expect(keyDialog.locator('text=btx_')).toBeVisible()
 
     // Close the dialog — navigates to the detail page
     await page.getByRole('button', { name: 'Done' }).click()
@@ -98,7 +98,7 @@ test.describe('API Keys Management', () => {
     await page.waitForLoadState('networkidle')
 
     await expect(page.getByText(keyName)).toBeVisible()
-    await expect(page.locator('code').filter({ hasText: 'whm_' }).first()).toBeVisible()
+    await expect(page.locator('code').filter({ hasText: 'btx_' }).first()).toBeVisible()
   })
 
   test('should delete API key from list', async ({ page }) => {

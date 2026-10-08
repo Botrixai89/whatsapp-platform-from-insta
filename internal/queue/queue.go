@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
 )
 
 // JobType represents the type of job

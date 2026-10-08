@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/config"
+	"github.com/Botrixai89/botrixai/internal/handlers"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/handlers"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -498,8 +498,8 @@ func TestApp_CallbackSSO_CustomProvider_ExistingUser_LoginSuccess(t *testing.T) 
 	assert.Equal(t, fasthttp.StatusTemporaryRedirect, testutil.GetResponseStatusCode(req))
 
 	// Auth cookies set on the response.
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_access"))
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_refresh"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_access"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_refresh"))
 
 	// Token endpoint received our code.
 	assert.Equal(t, "auth-code-xyz", fake.LastTokenCode)
@@ -569,7 +569,7 @@ func TestApp_CallbackSSO_AutoCreateEnabledCreatesUserWithDefaultRole(t *testing.
 
 	require.NoError(t, app.CallbackSSO(req))
 	require.Equal(t, fasthttp.StatusTemporaryRedirect, testutil.GetResponseStatusCode(req))
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_access"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_access"))
 
 	var created models.User
 	require.NoError(t, app.DB.Where("email = ?", "auto@example.com").First(&created).Error)
@@ -640,5 +640,5 @@ func TestApp_CallbackSSO_DisabledExistingUserRejected(t *testing.T) {
 	loc := string(req.RequestCtx.Response.Header.Peek("Location"))
 	assert.Contains(t, loc, "Account+is+disabled")
 	// No cookies set when account is disabled.
-	assert.Empty(t, testutil.GetResponseCookie(req, "whm_access"))
+	assert.Empty(t, testutil.GetResponseCookie(req, "btx_access"))
 }

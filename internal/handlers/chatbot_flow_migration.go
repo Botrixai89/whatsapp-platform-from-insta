@@ -8,7 +8,7 @@ import (
 	"github.com/zerodha/logf"
 	"gorm.io/gorm"
 
-	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/Botrixai89/botrixai/internal/models"
 )
 
 // BackfillChatbotFlowGraph fills ChatbotFlow.Graph for every row where

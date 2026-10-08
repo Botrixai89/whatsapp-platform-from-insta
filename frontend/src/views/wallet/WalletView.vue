@@ -8,10 +8,12 @@ import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { PageHeader, DataTable, type Column } from '@/components/shared'
 import TransactionsTable from '@/views/admin/TransactionsTable.vue'
+import WalletAdjustDialog from '@/views/admin/WalletAdjustDialog.vue'
+import { useAuthStore } from '@/stores/auth'
 import { walletService, type MessageRate } from '@/services/api'
 import { useWalletStore, formatMoney } from '@/stores/wallet'
 import { formatDate } from '@/lib/utils'
-import { Wallet, AlertTriangle, Ban, RefreshCw, Info } from 'lucide-vue-next'
+import { Wallet, AlertTriangle, Ban, RefreshCw, Info, Plus, Minus } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const walletStore = useWalletStore()
@@ -19,6 +21,16 @@ const rates = ref<MessageRate[]>([])
 const txTable = ref<InstanceType<typeof TransactionsTable> | null>(null)
 
 const summary = computed(() => walletStore.summary)
+const authStore = useAuthStore()
+const isSuperAdmin = computed(() => !!authStore.user?.is_super_admin)
+
+// Owners can top up / deduct the wallet of the organization they are viewing
+const adjustOpen = ref(false)
+const adjustType = ref<'credit' | 'debit'>('credit')
+function openAdjust(type: 'credit' | 'debit') {
+  adjustType.value = type
+  adjustOpen.value = true
+}
 const money = (v: number) => formatMoney(v, walletStore.currency)
 
 onMounted(async () => {
@@ -79,7 +91,11 @@ const rateColumns = computed<Column<MessageRate>[]>(() => [
               <div class="flex justify-between"><span class="text-muted-foreground">{{ $t('wallet.spentThisMonth') }}</span><span class="tabular-nums">{{ money(summary?.spent_this_month || 0) }}</span></div>
               <div v-if="summary?.wallet.credit_limit" class="flex justify-between"><span class="text-muted-foreground">{{ $t('owner.creditLimit') }}</span><span class="tabular-nums">{{ money(summary.wallet.credit_limit) }}</span></div>
               <div class="flex justify-between"><span class="text-muted-foreground">{{ $t('owner.totalRecharged') }}</span><span class="tabular-nums">{{ money(summary?.wallet.total_credited || 0) }}</span></div>
-              <div class="flex gap-2 rounded-md bg-white/[0.04] light:bg-gray-50 p-3 text-xs text-muted-foreground">
+              <div v-if="isSuperAdmin && summary" class="flex gap-2 pt-1">
+                <Button size="sm" class="flex-1" @click="openAdjust('credit')"><Plus class="h-4 w-4 mr-1" />{{ $t('owner.addFunds') }}</Button>
+                <Button size="sm" variant="outline" class="flex-1" @click="openAdjust('debit')"><Minus class="h-4 w-4 mr-1" />{{ $t('owner.deduct') }}</Button>
+              </div>
+              <div v-else class="flex gap-2 rounded-md bg-white/[0.04] light:bg-gray-50 p-3 text-xs text-muted-foreground">
                 <Info class="h-4 w-4 shrink-0" />{{ $t('wallet.rechargeHint') }}
               </div>
             </CardContent>
@@ -148,5 +164,14 @@ const rateColumns = computed<Column<MessageRate>[]>(() => [
         </Card>
       </div>
     </ScrollArea>
+    <WalletAdjustDialog
+      v-if="isSuperAdmin && summary"
+      v-model:open="adjustOpen"
+      :org-id="summary.wallet.organization_id"
+      :type="adjustType"
+      :balance="walletStore.balance"
+      :currency="walletStore.currency"
+      @done="refresh"
+    />
   </div>
 </template>

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/expr-lang/expr"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
 )
 
 // maxChatGraphIterations bounds non-blocking node chains within a single

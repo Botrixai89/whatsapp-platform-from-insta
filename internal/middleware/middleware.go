@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
@@ -154,8 +154,8 @@ func AuthWithDB(secret string, db *gorm.DB) fastglue.FastMiddleware {
 			}
 			tokenString = parts[1]
 		} else {
-			// Fall back to whm_access cookie
-			tokenString = string(r.RequestCtx.Request.Header.Cookie("whm_access"))
+			// Fall back to btx_access cookie
+			tokenString = string(r.RequestCtx.Request.Header.Cookie("btx_access"))
 		}
 
 		if tokenString == "" {
@@ -194,8 +194,8 @@ func AuthWithDB(secret string, db *gorm.DB) fastglue.FastMiddleware {
 
 // validateAPIKey validates an API key and sets context values
 func validateAPIKey(r *fastglue.Request, key string, db *gorm.DB) bool {
-	// API key format: whm_<32 hex chars>
-	if len(key) != 36 || key[:4] != "whm_" {
+	// API key format: btx_<32 hex chars>
+	if len(key) != 36 || key[:4] != "btx_" {
 		return false
 	}
 

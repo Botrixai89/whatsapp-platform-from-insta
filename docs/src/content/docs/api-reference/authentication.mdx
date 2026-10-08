@@ -7,7 +7,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## Overview
 
-Whatomate supports two authentication methods:
+BotrixAI supports two authentication methods:
 
 1. **Session cookies** - For user sessions and frontend applications
 2. **API Keys** - For server-to-server integrations and automation
@@ -17,18 +17,18 @@ Logging in (or registering, refreshing, or switching org) sets three cookies and
 
 | Cookie | httpOnly | Path | Max-Age | Purpose |
 |---|---|---|---|---|
-| `whm_access` | yes | `<base_path>/api` | `jwt.access_expiry_mins` | The access JWT |
-| `whm_refresh` | yes | `<base_path>/api/auth/refresh` | `jwt.refresh_expiry_days` | The refresh JWT |
-| `whm_csrf` | **no** | `<base_path>/` | `jwt.refresh_expiry_days` | Read by JS and echoed back in `X-CSRF-Token` |
+| `btx_access` | yes | `<base_path>/api` | `jwt.access_expiry_mins` | The access JWT |
+| `btx_refresh` | yes | `<base_path>/api/auth/refresh` | `jwt.refresh_expiry_days` | The refresh JWT |
+| `btx_csrf` | **no** | `<base_path>/` | `jwt.refresh_expiry_days` | Read by JS and echoed back in `X-CSRF-Token` |
 
 All three are `SameSite=Lax`, and `Secure` when `cookie.secure` is set (forced on in production).
 Because the two auth cookies are httpOnly, JavaScript cannot read them; the browser attaches them
 automatically.
 
-Cookie-authenticated **mutating** requests must also send the `whm_csrf` value in an
-`X-CSRF-Token` header — see [CSRF](/whatomate/api-reference/overview#csrf).
+Cookie-authenticated **mutating** requests must also send the `btx_csrf` value in an
+`X-CSRF-Token` header — see [CSRF](/botrixai/api-reference/overview#csrf).
 
-For non-browser clients, use an [API key](/whatomate/api-reference/api-keys) in the `X-API-Key`
+For non-browser clients, use an [API key](/botrixai/api-reference/api-keys) in the `X-API-Key`
 header — those requests skip the CSRF check. An `Authorization: Bearer <token>` header is accepted
 only as a fallback.
 
@@ -74,7 +74,7 @@ POST /api/auth/register
 
 ### Response
 
-Sets the `whm_access` and `whm_refresh` httpOnly cookies. The body contains the expiry hint and the full user object — no tokens.
+Sets the `btx_access` and `btx_refresh` httpOnly cookies. The body contains the expiry hint and the full user object — no tokens.
 
 ```json
 {
@@ -97,7 +97,7 @@ Sets the `whm_access` and `whm_refresh` httpOnly cookies. The body contains the 
 
 ## Login
 
-Authenticate and start a session. On success, the `whm_access` and `whm_refresh` httpOnly cookies are set and the body returns the full user object (note the field is `full_name`, not `name`).
+Authenticate and start a session. On success, the `btx_access` and `btx_refresh` httpOnly cookies are set and the body returns the full user object (note the field is `full_name`, not `name`).
 
 ```bash
 POST /api/auth/login
@@ -135,7 +135,7 @@ POST /api/auth/login
 
 ## Refresh Token
 
-Rotate the access token. The endpoint reads the refresh token from the `whm_refresh` **cookie** first, falling back to a `refresh_token` field in the JSON body. On success, both cookies are re-issued.
+Rotate the access token. The endpoint reads the refresh token from the `btx_refresh` **cookie** first, falling back to a `refresh_token` field in the JSON body. On success, both cookies are re-issued.
 
 ```bash
 POST /api/auth/refresh
@@ -143,7 +143,7 @@ POST /api/auth/refresh
 
 ### Request Body
 
-The body is optional when the `whm_refresh` cookie is present. Provide it only for non-browser clients:
+The body is optional when the `btx_refresh` cookie is present. Provide it only for non-browser clients:
 
 ```json
 {
@@ -214,7 +214,7 @@ POST /api/auth/switch-org
 
 ## Logout
 
-Clear the session. Revokes the refresh token (read from the `whm_refresh` cookie, or the body as a fallback) and clears both auth cookies.
+Clear the session. Revokes the refresh token (read from the `btx_refresh` cookie, or the body as a fallback) and clears both auth cookies.
 
 ```bash
 POST /api/auth/logout
@@ -308,7 +308,7 @@ Browser clients need no extra headers — the httpOnly cookies are sent automati
 
 ```bash
 curl -X GET "http://your-server:8080/api/contacts" \
-  -H "X-API-Key: whm_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+  -H "X-API-Key: btx_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
 ```
 
 ## Token Expiration

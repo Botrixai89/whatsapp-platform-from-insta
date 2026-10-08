@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/handlers"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/handlers"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -306,7 +306,7 @@ func TestApp_CreateAPIKey_HashIsBcryptOfFullKey(t *testing.T) {
 	require.NoError(t, app.DB.Where("id = ?", resp.Data.ID).First(&got).Error)
 	assert.NotEqual(t, resp.Data.Key, got.KeyHash, "stored hash must not be the plaintext key")
 	assert.Greater(t, len(got.KeyHash), 50, "stored hash should look like a bcrypt hash")
-	// Stored prefix is the first 16 chars after "whm_" — 4..20 in the full key.
+	// Stored prefix is the first 16 chars after "btx_" — 4..20 in the full key.
 	assert.Equal(t, resp.Data.Key[4:20], got.KeyPrefix)
 }
 

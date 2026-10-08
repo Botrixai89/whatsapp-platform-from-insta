@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/audit"
+	"github.com/Botrixai89/botrixai/internal/crypto"
+	"github.com/Botrixai89/botrixai/internal/database"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/internal/utils"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/audit"
-	"github.com/shridarpatil/whatomate/internal/crypto"
-	"github.com/shridarpatil/whatomate/internal/database"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/internal/utils"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/handlers"
-	"github.com/shridarpatil/whatomate/internal/queue"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
-	"github.com/shridarpatil/whatomate/test/testutil"
+	"github.com/Botrixai89/botrixai/internal/config"
+	"github.com/Botrixai89/botrixai/internal/handlers"
+	"github.com/Botrixai89/botrixai/internal/queue"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
+	"github.com/Botrixai89/botrixai/test/testutil"
 )
 
 // appOption configures an App for testing.

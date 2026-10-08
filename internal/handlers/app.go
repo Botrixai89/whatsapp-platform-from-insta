@@ -6,17 +6,17 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/Botrixai89/botrixai/internal/assignment"
+	"github.com/Botrixai89/botrixai/internal/billing"
+	"github.com/Botrixai89/botrixai/internal/calling"
+	"github.com/Botrixai89/botrixai/internal/config"
+	"github.com/Botrixai89/botrixai/internal/queue"
+	"github.com/Botrixai89/botrixai/internal/storage"
+	"github.com/Botrixai89/botrixai/internal/tts"
+	"github.com/Botrixai89/botrixai/internal/websocket"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/shridarpatil/whatomate/internal/assignment"
-	"github.com/shridarpatil/whatomate/internal/billing"
-	"github.com/shridarpatil/whatomate/internal/calling"
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/queue"
-	"github.com/shridarpatil/whatomate/internal/storage"
-	"github.com/shridarpatil/whatomate/internal/tts"
-	"github.com/shridarpatil/whatomate/internal/websocket"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
@@ -109,7 +109,7 @@ func (a *App) getOrgID(r *fastglue.Request) (uuid.UUID, error) {
 func (a *App) HealthCheck(r *fastglue.Request) error {
 	return r.SendEnvelope(map[string]string{
 		"status":  "ok",
-		"service": "whatomate",
+		"service": "botrixai",
 	})
 }
 

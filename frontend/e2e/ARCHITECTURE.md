@@ -154,7 +154,7 @@ Playwright's `request` fixture is **the same APIRequestContext for the whole
 test run** (`beforeEach` + body + `afterEach`). Cookies and headers persist.
 
 **This means: do NOT call `api.login()` more than once on the same test's
-`request` context.** The second call sends the `whm_access` cookie set by
+`request` context.** The second call sends the `btx_access` cookie set by
 the first, which trips CSRF middleware (login itself doesn't send
 `X-CSRF-Token`). You'll see:
 

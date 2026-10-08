@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/contactutil"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/internal/websocket"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/contactutil"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/internal/websocket"
 	"gorm.io/gorm"
 )
 

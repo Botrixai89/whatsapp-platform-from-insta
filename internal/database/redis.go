@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"fmt"
 
+	"github.com/Botrixai89/botrixai/internal/config"
 	"github.com/redis/go-redis/v9"
-	"github.com/shridarpatil/whatomate/internal/config"
 )
 
 // NewRedis creates a new Redis client

@@ -1,6 +1,6 @@
 ---
 title: API Overview
-description: Introduction to the Whatomate REST API
+description: Introduction to the BotrixAI REST API
 ---
 
 import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
@@ -15,17 +15,17 @@ http://your-server:8080/api
 
 ## Authentication
 
-The primary authentication mechanism is **httpOnly session cookies**. Logging in (`POST /api/auth/login`) sets `whm_access` and `whm_refresh` cookies — the login response does **not** contain a token in its body. Browser clients are authenticated automatically by these cookies on every subsequent request.
+The primary authentication mechanism is **httpOnly session cookies**. Logging in (`POST /api/auth/login`) sets `btx_access` and `btx_refresh` cookies — the login response does **not** contain a token in its body. Browser clients are authenticated automatically by these cookies on every subsequent request.
 
 For server-to-server integrations, send an **API key** in the `X-API-Key` header instead:
 
 ```bash
-X-API-Key: whm_<your-api-key>
+X-API-Key: btx_<your-api-key>
 ```
 
 A `Authorization: Bearer <token>` header is also accepted as a fallback, but cookies and API keys are the recommended methods.
 
-See [Authentication](/whatomate/api-reference/authentication) for details on the cookie flow, and [API Keys](/whatomate/api-reference/api-keys) for programmatic access.
+See [Authentication](/botrixai/api-reference/authentication) for details on the cookie flow, and [API Keys](/botrixai/api-reference/api-keys) for programmatic access.
 
 ## Response Format
 
@@ -93,8 +93,8 @@ Retry-After: 42
 
 ## CSRF
 
-Mutating requests (`POST`, `PUT`, `DELETE`, `PATCH`) authenticated by the `whm_access` **cookie**
-must also send the value of the `whm_csrf` cookie back in an `X-CSRF-Token` header — a mismatch
+Mutating requests (`POST`, `PUT`, `DELETE`, `PATCH`) authenticated by the `btx_access` **cookie**
+must also send the value of the `btx_csrf` cookie back in an `X-CSRF-Token` header — a mismatch
 returns `403 CSRF token mismatch`. Requests authenticated with an `X-API-Key` or
 `Authorization` header skip this check entirely, so server-to-server clients need no CSRF token.
 
@@ -160,48 +160,48 @@ There is no `total_pages` field — derive page count from `total` and `limit`.
 
 <CardGrid>
   <Card title="Authentication" icon="approve-check">
-    Register, login, and manage tokens. [View →](/whatomate/api-reference/authentication)
+    Register, login, and manage tokens. [View →](/botrixai/api-reference/authentication)
   </Card>
   <Card title="Users" icon="setting">
-    User management (Admin only). [View →](/whatomate/api-reference/users)
+    User management (Admin only). [View →](/botrixai/api-reference/users)
   </Card>
   <Card title="Organizations" icon="star">
-    Organization and member management. [View →](/whatomate/api-reference/organizations)
+    Organization and member management. [View →](/botrixai/api-reference/organizations)
   </Card>
   <Card title="Contacts" icon="open-book">
-    Manage contacts and assignments. [View →](/whatomate/api-reference/contacts)
+    Manage contacts and assignments. [View →](/botrixai/api-reference/contacts)
   </Card>
   <Card title="Messages" icon="comment">
-    Send and receive messages. [View →](/whatomate/api-reference/messages)
+    Send and receive messages. [View →](/botrixai/api-reference/messages)
   </Card>
   <Card title="Templates" icon="document">
-    Manage message templates. [View →](/whatomate/api-reference/templates)
+    Manage message templates. [View →](/botrixai/api-reference/templates)
   </Card>
   <Card title="Flows" icon="puzzle">
-    WhatsApp Flows management. [View →](/whatomate/api-reference/flows)
+    WhatsApp Flows management. [View →](/botrixai/api-reference/flows)
   </Card>
   <Card title="Chatbot" icon="setting">
-    Chatbot configuration. [View →](/whatomate/api-reference/chatbot)
+    Chatbot configuration. [View →](/botrixai/api-reference/chatbot)
   </Card>
   <Card title="Webhooks" icon="rocket">
-    Receive real-time updates. [View →](/whatomate/api-reference/webhooks)
+    Receive real-time updates. [View →](/botrixai/api-reference/webhooks)
   </Card>
   <Card title="Analytics" icon="graph">
-    Dashboard and message analytics. [View →](/whatomate/api-reference/analytics)
+    Dashboard and message analytics. [View →](/botrixai/api-reference/analytics)
   </Card>
   <Card title="Roles" icon="approve-check">
-    Roles and permission management. [View →](/whatomate/api-reference/roles)
+    Roles and permission management. [View →](/botrixai/api-reference/roles)
   </Card>
   <Card title="Teams" icon="star">
-    Organize agents into teams. [View →](/whatomate/api-reference/teams)
+    Organize agents into teams. [View →](/botrixai/api-reference/teams)
   </Card>
   <Card title="Canned Responses" icon="comment">
-    Reusable quick replies. [View →](/whatomate/api-reference/canned-responses)
+    Reusable quick replies. [View →](/botrixai/api-reference/canned-responses)
   </Card>
   <Card title="Custom Actions" icon="puzzle">
-    Configure external integrations. [View →](/whatomate/api-reference/custom-actions)
+    Configure external integrations. [View →](/botrixai/api-reference/custom-actions)
   </Card>
   <Card title="Calling" icon="rocket">
-    Call logs, IVR flows, and transfers. [View →](/whatomate/api-reference/calling)
+    Call logs, IVR flows, and transfers. [View →](/botrixai/api-reference/calling)
   </Card>
 </CardGrid>

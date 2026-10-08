@@ -3,7 +3,7 @@ package audit_test
 import (
 	"testing"
 
-	"github.com/shridarpatil/whatomate/internal/audit"
+	"github.com/Botrixai89/botrixai/internal/audit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

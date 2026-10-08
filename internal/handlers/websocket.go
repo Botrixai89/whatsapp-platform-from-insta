@@ -1,11 +1,11 @@
 package handlers
 
 import (
+	"github.com/Botrixai89/botrixai/internal/middleware"
+	ws "github.com/Botrixai89/botrixai/internal/websocket"
 	"github.com/fasthttp/websocket"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/middleware"
-	ws "github.com/shridarpatil/whatomate/internal/websocket"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

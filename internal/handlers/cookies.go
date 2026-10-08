@@ -9,16 +9,16 @@ import (
 )
 
 const (
-	cookieAccessName  = "whm_access"
-	cookieRefreshName = "whm_refresh"
-	cookieCSRFName    = "whm_csrf"
+	cookieAccessName  = "btx_access"
+	cookieRefreshName = "btx_refresh"
+	cookieCSRFName    = "btx_csrf"
 )
 
 // setAuthCookies sets httpOnly auth cookies and a JS-readable CSRF cookie.
 func (a *App) setAuthCookies(r *fastglue.Request, accessToken, refreshToken string) {
 	secure := a.Config.Cookie.Secure
 	domain := a.Config.Cookie.Domain
-	bp := a.Config.Server.BasePath // e.g. "/whatomate" or ""
+	bp := a.Config.Server.BasePath // e.g. "/botrixai" or ""
 
 	// Access token cookie — httpOnly, scoped to basePath/api
 	ac := fasthttp.AcquireCookie()

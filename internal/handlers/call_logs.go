@@ -3,8 +3,8 @@ package handlers
 import (
 	"time"
 
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/internal/utils"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/internal/utils"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

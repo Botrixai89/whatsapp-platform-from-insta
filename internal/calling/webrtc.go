@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/pion/webrtc/v4"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 )
 
 // negotiateWebRTC handles the SDP exchange and sets up WebRTC media.

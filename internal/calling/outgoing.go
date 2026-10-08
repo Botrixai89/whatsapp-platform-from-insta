@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/internal/websocket"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/internal/websocket"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 )
 
 // InitiateOutgoingCall sets up WebRTC between the agent browser and

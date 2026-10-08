@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/middleware"
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/test/testutil"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/middleware"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -50,9 +50,9 @@ func TestApp_Login_Success(t *testing.T) {
 	assert.Equal(t, email, resp.Data.User.Email)
 
 	// Tokens should be in Set-Cookie headers
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_access"))
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_refresh"))
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_csrf"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_access"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_refresh"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_csrf"))
 }
 
 func TestApp_Login_WrongPassword(t *testing.T) {
@@ -181,8 +181,8 @@ func TestApp_Register_Success(t *testing.T) {
 	assert.True(t, resp.Data.User.IsActive)
 
 	// Tokens should be in cookies
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_access"))
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_refresh"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_access"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_refresh"))
 
 	// Verify the user has the default role in the database
 	userID, err := uuid.Parse(resp.Data.User.ID)
@@ -243,7 +243,7 @@ func TestApp_Register_ExistingUser_JoinsNewOrg(t *testing.T) {
 	assert.Equal(t, fasthttp.StatusOK, testutil.GetResponseStatusCode(req))
 
 	// Tokens should be in cookies, not body
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_access"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_access"))
 }
 
 func TestApp_Register_InvalidRequestBody(t *testing.T) {
@@ -285,8 +285,8 @@ func TestApp_RefreshToken_Success(t *testing.T) {
 	assert.Equal(t, 15*60, resp.Data.ExpiresIn)
 
 	// Tokens should be in cookies
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_access"))
-	assert.NotEmpty(t, testutil.GetResponseCookie(req, "whm_refresh"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_access"))
+	assert.NotEmpty(t, testutil.GetResponseCookie(req, "btx_refresh"))
 }
 
 func TestApp_RefreshToken_Expired(t *testing.T) {
@@ -395,8 +395,8 @@ func TestApp_GeneratedTokensAreValid(t *testing.T) {
 	assert.Equal(t, fasthttp.StatusOK, testutil.GetResponseStatusCode(req))
 
 	// Read tokens from cookies
-	accessTokenStr := testutil.GetResponseCookie(req, "whm_access")
-	refreshTokenStr := testutil.GetResponseCookie(req, "whm_refresh")
+	accessTokenStr := testutil.GetResponseCookie(req, "btx_access")
+	refreshTokenStr := testutil.GetResponseCookie(req, "btx_refresh")
 	require.NotEmpty(t, accessTokenStr)
 	require.NotEmpty(t, refreshTokenStr)
 
@@ -413,7 +413,7 @@ func TestApp_GeneratedTokensAreValid(t *testing.T) {
 	assert.Equal(t, org.ID, accessClaims.OrganizationID)
 	assert.Equal(t, user.Email, accessClaims.Email)
 	assert.Equal(t, user.RoleID, accessClaims.RoleID)
-	assert.Equal(t, "whatomate", accessClaims.Issuer)
+	assert.Equal(t, "botrixai", accessClaims.Issuer)
 
 	// Verify refresh token can be parsed
 	refreshToken, err := jwt.ParseWithClaims(refreshTokenStr, &middleware.JWTClaims{}, func(token *jwt.Token) (any, error) {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/Botrixai89/botrixai/internal/models"
+	"github.com/Botrixai89/botrixai/internal/websocket"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/internal/websocket"
 )
 
 // missedCallPreview is what the contact list shows for a missed call.
