@@ -17,7 +17,7 @@ import { useCrudState } from '@/composables/useCrudState'
 import { useWalletStore, formatMoney } from '@/stores/wallet'
 import { getErrorMessage } from '@/lib/api-utils'
 import { toast } from 'vue-sonner'
-import { Package, Plus, Pencil, Trash2, Users, Phone, MessageSquare, Star } from 'lucide-vue-next'
+import { Package, Plus, Pencil, Trash2, Users, Phone, MessageSquare } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const walletStore = useWalletStore()
@@ -108,7 +108,7 @@ const limit = (v: number) => (v > 0 ? v.toLocaleString() : t('owner.unlimited'))
 
 <template>
   <div class="flex flex-col h-full bg-[#0a0a0b] light:bg-gray-50">
-    <PageHeader :title="$t('owner.plansTitle')" :description="$t('owner.plansSubtitle')" :icon="Package" icon-gradient="bg-gradient-to-br from-fuchsia-500 to-pink-600 shadow-fuchsia-500/20">
+    <PageHeader :title="$t('owner.plansTitle')" :description="$t('owner.plansSubtitle')" :icon="Package">
       <template #actions>
         <Button size="sm" @click="openCreateDialog"><Plus class="h-4 w-4 mr-2" />{{ $t('owner.addPlan') }}</Button>
       </template>
@@ -117,7 +117,7 @@ const limit = (v: number) => (v > 0 ? v.toLocaleString() : t('owner.unlimited'))
     <ErrorState v-if="error && !isLoading" :title="$t('common.loadErrorTitle')" :description="$t('common.loadErrorDescription')" :retry-label="$t('common.retryLoad')" class="flex-1" @retry="load" />
 
     <ScrollArea v-else class="flex-1">
-      <div class="p-6 max-w-7xl mx-auto">
+      <div class="p-6">
         <div v-if="isLoading" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Skeleton v-for="i in 3" :key="i" class="h-64 rounded-xl" />
         </div>
@@ -136,11 +136,8 @@ const limit = (v: number) => (v > 0 ? v.toLocaleString() : t('owner.unlimited'))
             <CardHeader>
               <div class="flex items-start justify-between gap-2">
                 <div>
-                  <CardTitle class="flex items-center gap-2">
-                    {{ p.name }}
-                    <Star v-if="p.is_default" class="h-4 w-4 text-amber-400 fill-amber-400" />
-                  </CardTitle>
-                  <CardDescription class="mt-1">{{ p.description || '—' }}</CardDescription>
+                  <CardTitle class="text-lg">{{ p.name }}</CardTitle>
+                  <CardDescription v-if="p.description" class="mt-1">{{ p.description }}</CardDescription>
                 </div>
                 <div class="flex gap-1">
                   <IconButton :icon="Pencil" :label="$t('common.edit')" class="h-8 w-8" @click="openEdit(p)" />
@@ -154,13 +151,13 @@ const limit = (v: number) => (v > 0 ? v.toLocaleString() : t('owner.unlimited'))
                 <span class="text-sm text-muted-foreground"> / {{ p.billing_cycle === 'yearly' ? $t('owner.year') : $t('owner.month') }}</span>
               </div>
               <ul class="space-y-2 text-sm">
-                <li class="flex items-center gap-2"><Users class="h-4 w-4 text-muted-foreground" />{{ $t('owner.usersLimit', { n: limit(p.max_users) }) }}</li>
-                <li class="flex items-center gap-2"><Phone class="h-4 w-4 text-muted-foreground" />{{ $t('owner.numbersLimit', { n: limit(p.max_accounts) }) }}</li>
-                <li class="flex items-center gap-2"><MessageSquare class="h-4 w-4 text-muted-foreground" />{{ $t('owner.messagesLimit', { n: limit(p.max_monthly_messages) }) }}</li>
+                <li class="flex items-center gap-2"><Users class="h-4 w-4 text-muted-foreground" />{{ $t('owner.usersLimit', { n: limit(p.max_users) }, p.max_users === 1 ? 1 : 2) }}</li>
+                <li class="flex items-center gap-2"><Phone class="h-4 w-4 text-muted-foreground" />{{ $t('owner.numbersLimit', { n: limit(p.max_accounts) }, p.max_accounts === 1 ? 1 : 2) }}</li>
+                <li class="flex items-center gap-2"><MessageSquare class="h-4 w-4 text-muted-foreground" />{{ $t('owner.messagesLimit', { n: limit(p.max_monthly_messages) }, p.max_monthly_messages === 1 ? 1 : 2) }}</li>
               </ul>
               <div class="flex items-center gap-2 pt-2 border-t border-white/[0.08] light:border-gray-200">
-                <Badge variant="secondary">{{ $t('owner.nClients', { n: p.clients_count || 0 }) }}</Badge>
-                <Badge v-if="p.is_default" variant="warning">{{ $t('owner.default') }}</Badge>
+                <Badge variant="secondary">{{ $t('owner.nClients', { n: p.clients_count || 0 }, p.clients_count || 0) }}</Badge>
+                <Badge v-if="p.is_default">{{ $t('owner.default') }}</Badge>
                 <Badge v-if="!p.is_active" variant="secondary">{{ $t('common.inactive') }}</Badge>
               </div>
             </CardContent>

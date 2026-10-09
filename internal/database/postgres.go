@@ -122,6 +122,9 @@ func GetMigrationModels() []MigrationModel {
 		{"WalletTransaction", &models.WalletTransaction{}},
 		{"MessageCharge", &models.MessageCharge{}},
 		{"MessageRate", &models.MessageRate{}},
+
+		// AI template generator
+		{"TemplateAIPrompt", &models.TemplateAIPrompt{}},
 	}
 }
 

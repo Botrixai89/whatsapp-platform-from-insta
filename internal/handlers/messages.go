@@ -527,6 +527,9 @@ func (a *App) broadcastNewMessage(orgID uuid.UUID, msg *models.Message, contact 
 		"updated_at":       msg.UpdatedAt,
 		"is_reply":         msg.IsReply,
 	}
+	if name := a.senderName(msg.SentByUserID); name != "" {
+		payload["sent_by_name"] = name
+	}
 
 	// Add interactive data
 	if msg.InteractiveData != nil {
@@ -591,6 +594,16 @@ func (a *App) dispatchMessageSentWebhook(account *models.WhatsAppAccount, contac
 		Direction:       models.DirectionOutgoing,
 		SentByUserID:    sentByUserID,
 	})
+}
+
+// senderName returns the full name of the agent who sent a message, or "" for automated sends.
+func (a *App) senderName(userID *uuid.UUID) string {
+	if userID == nil {
+		return ""
+	}
+	var name string
+	a.DB.Unscoped().Model(&models.User{}).Where("id = ?", *userID).Select("full_name").Scan(&name)
+	return name
 }
 
 // updateContactLastMessage updates contact's last_message_at and preview
@@ -996,6 +1009,7 @@ func (a *App) SendTemplateMessage(r *fastglue.Request) error {
 
 	// Build full message response (same shape as SendMessage)
 	response := MessageResponse{
+		SentByName:      a.senderName(message.SentByUserID),
 		ID:              message.ID,
 		ContactID:       message.ContactID,
 		Direction:       message.Direction,

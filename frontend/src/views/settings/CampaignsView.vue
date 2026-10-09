@@ -247,7 +247,6 @@ function getProgressPercentage(campaign: Campaign): number {
       :title="$t('campaigns.title')"
       :subtitle="$t('campaigns.subtitle')"
       :icon="Megaphone"
-      icon-gradient="bg-gradient-to-br from-rose-500 to-pink-600 shadow-rose-500/20"
     >
       <template #actions>
         <RouterLink to="/campaigns/new">

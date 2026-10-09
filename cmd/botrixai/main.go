@@ -658,6 +658,7 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	g.PUT("/api/contacts/{id}", app.UpdateContact)
 	g.DELETE("/api/contacts/{id}", app.DeleteContact)
 	g.PUT("/api/contacts/{id}/assign", app.AssignContact)
+	g.PUT("/api/contacts/{id}/conversation", app.UpdateConversation)
 	g.PUT("/api/contacts/{id}/tags", app.UpdateContactTags)
 	g.GET("/api/contacts/{id}/session-data", app.GetContactSessionData)
 
@@ -701,6 +702,12 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	g.POST("/api/templates/sync", app.SyncTemplates)
 	g.POST("/api/templates/{id}/publish", app.SubmitTemplate)
 	g.POST("/api/templates/upload-media", app.UploadTemplateMedia)
+	g.GET("/api/templates/analytics", app.GetTemplateAnalytics)
+	g.POST("/api/templates/ai/generate", app.GenerateTemplateWithAI)
+
+	// In-app help assistant
+	g.POST("/api/assistant/chat", app.AssistantChat)
+	g.GET("/api/templates/ai/prompts", app.ListTemplateAIPrompts)
 
 	// WhatsApp Flows
 	g.GET("/api/flows", app.ListFlows)

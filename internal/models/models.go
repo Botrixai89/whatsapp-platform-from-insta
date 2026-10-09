@@ -364,6 +364,11 @@ type Contact struct {
 	Metadata           JSONB      `gorm:"type:jsonb;default:'{}'" json:"metadata"`
 	LastInboundAt      *time.Time `json:"last_inbound_at,omitempty"` // When customer last sent a message (for 24h window tracking)
 
+	// Inbox state: agents close a conversation when done; a new inbound message reopens it.
+	ConversationStatus string `gorm:"size:20;default:'open';index" json:"conversation_status"`
+	// BotPaused stops the chatbot from replying to this contact only.
+	BotPaused bool `gorm:"default:false" json:"bot_paused"`
+
 	// Marketing opt-out (from Meta user_preferences webhook)
 	MarketingOptOut bool `gorm:"default:false" json:"marketing_opt_out"`
 

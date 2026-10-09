@@ -24,14 +24,24 @@ export interface Contact {
   tags: string[]
   metadata: Record<string, any>
   last_message_at?: string
+  last_message_preview?: string
   last_inbound_at?: string
   service_window_open?: boolean
   unread_count: number
   assigned_user_id?: string
   whatsapp_account?: string
   marketing_opt_out?: boolean
+  conversation_status?: 'open' | 'closed'
+  bot_paused?: boolean
   created_at: string
   updated_at: string
+}
+
+export interface InboxFilters {
+  status?: 'open' | 'closed'
+  unread?: boolean
+  assignment?: 'assigned' | 'unassigned' | 'mine'
+  bot?: 'on' | 'off'
 }
 
 export interface ReplyPreview {
@@ -51,6 +61,8 @@ export interface Message {
   id: string
   contact_id: string
   direction: 'incoming' | 'outgoing'
+  /** Agent who sent an outgoing message; absent for bot/API/campaign sends */
+  sent_by_name?: string
   message_type: string
   content: any
   media_url?: string
@@ -94,6 +106,17 @@ export const useContactsStore = defineStore('contacts', () => {
   const hasMoreMessages = ref(false)
   const searchQuery = ref('')
   const selectedTags = ref<string[]>([])
+  // Inbox tab filters; empty fields mean "any"
+  const inboxFilters = ref<InboxFilters>({})
+  function inboxParams() {
+    const f = inboxFilters.value
+    return {
+      conversation_status: f.status,
+      unread: f.unread || undefined,
+      assignment: f.assignment,
+      bot: f.bot,
+    }
+  }
   const replyingTo = ref<Message | null>(null)
   const accountFilter = ref<string | null>(null)
 
@@ -128,6 +151,7 @@ export const useContactsStore = defineStore('contacts', () => {
         limit: contactsLimit.value,
         tags: tagsParam,
         search,
+        ...inboxParams(),
         ...params
       })
       // API returns { status: "success", data: { contacts: [...], total: number } }
@@ -154,7 +178,8 @@ export const useContactsStore = defineStore('contacts', () => {
         page: nextPage,
         limit: contactsLimit.value,
         tags: tagsParam,
-        search
+        search,
+        ...inboxParams()
       })
       const data = response.data.data || response.data
       const newContacts = data.contacts || []
@@ -293,18 +318,33 @@ export const useContactsStore = defineStore('contacts', () => {
     replyingTo.value = null
   }
 
+  // Short sidebar preview for a message ("Photo", "Document", or its text).
+  function messagePreviewText(message: Partial<Pick<Message, 'content' | 'message_type'>>): string {
+    const c: any = message.content
+    const text = typeof c === 'string' ? c : (c?.body || c?.caption || c?.text || '')
+    if (text) return String(text).slice(0, 100)
+    const labels: Record<string, string> = {
+      image: '📷 Photo', video: '🎥 Video', audio: '🎤 Audio', document: '📄 Document',
+      sticker: 'Sticker', location: '📍 Location', contacts: '👤 Contact', template: 'Template message',
+    }
+    return message.message_type ? (labels[message.message_type] || '') : ''
+  }
+
   // Reflect a new message on its sidebar row. Returns false when the contact
   // isn't in the loaded list (a new conversation, or beyond the loaded pages).
-  function updateContactFromMessage(message: Pick<Message, 'contact_id' | 'direction' | 'status' | 'created_at'>): boolean {
+  function updateContactFromMessage(message: Pick<Message, 'contact_id' | 'direction' | 'status' | 'created_at'> & Partial<Pick<Message, 'content' | 'message_type'>>): boolean {
     const contact = contacts.value.find(c => c.id === message.contact_id)
     if (!contact) return false
     contact.last_message_at = message.created_at
+    const preview = messagePreviewText(message)
+    if (preview) contact.last_message_preview = preview
     if (message.direction === 'incoming') {
       // Mirrors the server's unread count, which excludes already-read
       // messages (e.g. ones the chatbot handled).
       if (message.status !== 'read') contact.unread_count++
       contact.last_inbound_at = message.created_at
       contact.service_window_open = true
+      contact.conversation_status = 'open' // the server reopens closed chats on a new customer message
     }
     return true
   }
@@ -404,9 +444,24 @@ export const useContactsStore = defineStore('contacts', () => {
     }, 300)
   })
 
+  /** Opens/closes a chat or turns its bot on/off, updating the list and header in place. */
+  async function updateConversation(id: string, patch: { status?: 'open' | 'closed'; bot_paused?: boolean }) {
+    const res = await contactsService.updateConversation(id, patch)
+    const result = res.data.data
+    const apply = (c: Contact) => {
+      c.conversation_status = result.conversation_status
+      c.bot_paused = result.bot_paused
+    }
+    const inList = contacts.value.find(c => c.id === id)
+    if (inList) apply(inList)
+    if (currentContact.value?.id === id) apply(currentContact.value)
+  }
+
   return {
     contacts,
     currentContact,
+    inboxFilters,
+    updateConversation,
     messages,
     isLoading,
     isLoadingMessages,

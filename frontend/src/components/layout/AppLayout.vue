@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -19,7 +19,9 @@ import ActiveCallPanel from '@/components/calling/ActiveCallPanel.vue'
 import { ScrollToTop, BrandLogo } from '@/components/shared'
 import { navigationSections, type NavSection } from './navigation'
 import { useWalletStore, formatMoney } from '@/stores/wallet'
-import { Wallet, AlertTriangle, Ban } from 'lucide-vue-next'
+import { Wallet, AlertTriangle, Ban, MessageCircleQuestion } from 'lucide-vue-next'
+import HelpAssistant from '@/components/assistant/HelpAssistant.vue'
+import { useHelpAssistant } from '@/composables/useHelpAssistant'
 
 useI18n() // Enable $t() in template
 
@@ -29,6 +31,7 @@ const authStore = useAuthStore()
 const walletStore = useWalletStore()
 const isCollapsed = ref(false)
 const isMobileMenuOpen = ref(false)
+const helpAssistant = useHelpAssistant()
 const showWallet = computed(() => walletStore.enabled && authStore.hasPermission('settings.general', 'read'))
 
 // Refresh user data and connect WebSocket on mount
@@ -103,6 +106,20 @@ const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
 }
 
+// The inbox gets the room: like WhatsApp Web, the nav shrinks to an icon rail on
+// chat pages and goes back to the user's own choice everywhere else.
+const isChatRoute = computed(() => route.name === 'chat' || route.name === 'chat-conversation')
+let collapsedBeforeChat: boolean | null = null
+watch(isChatRoute, (inChat) => {
+  if (inChat) {
+    collapsedBeforeChat = isCollapsed.value
+    isCollapsed.value = true
+  } else if (collapsedBeforeChat !== null) {
+    isCollapsed.value = collapsedBeforeChat
+    collapsedBeforeChat = null
+  }
+}, { immediate: true })
+
 const handleLogout = async () => {
   await authStore.logout()
   router.push('/login')
@@ -146,7 +163,8 @@ const handleLogout = async () => {
         'fixed inset-y-0 left-0 z-40 md:relative',
         'transform md:transform-none',
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-        isCollapsed ? 'w-64 md:w-16' : 'w-64'
+        isCollapsed ? 'w-64 md:w-16' : 'w-64',
+        isChatRoute && isCollapsed && 'wa-rail'
       ]"
       role="navigation"
       aria-label="Main navigation"
@@ -175,8 +193,8 @@ const handleLogout = async () => {
       <OrganizationSwitcher :collapsed="isCollapsed" />
 
       <!-- Navigation -->
-      <ScrollArea class="flex-1 py-2">
-        <nav class="px-2" role="menubar">
+      <ScrollArea class="flex-1 py-2 [mask-image:linear-gradient(to_bottom,black_calc(100%-28px),transparent)]">
+        <nav class="px-2 pb-4" role="menubar">
           <template v-for="(section, sIdx) in mainSections" :key="section.label">
             <!-- Section header -->
             <div
@@ -235,7 +253,25 @@ const handleLogout = async () => {
       </ScrollArea>
 
       <!-- Bottom-pinned navigation (Settings) -->
-      <div v-if="bottomSections.length > 0" class="border-t border-white/[0.06] light:border-gray-200 px-2 py-2">
+      <div class="border-t border-white/[0.06] light:border-gray-200 px-2 py-2 space-y-0.5">
+        <button
+          type="button"
+          role="menuitem"
+          :data-active="helpAssistant.isOpen.value"
+          :aria-expanded="helpAssistant.isOpen.value"
+          :title="isCollapsed ? $t('assistant.navLabel') : undefined"
+          :class="[
+            'nav-active-indicator w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors',
+            helpAssistant.isOpen.value
+              ? 'bg-white/[0.08] text-white light:bg-gray-100 light:text-gray-900'
+              : 'text-white/50 hover:text-white hover:bg-white/[0.06] light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-50',
+            isCollapsed && 'md:justify-center md:px-2'
+          ]"
+          @click="helpAssistant.toggle(); isMobileMenuOpen = false"
+        >
+          <MessageCircleQuestion class="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span :class="isCollapsed && 'md:sr-only'">{{ $t('assistant.navLabel') }}</span>
+        </button>
         <template v-for="section in bottomSections" :key="section.label">
           <template v-for="item in section.items" :key="item.path">
             <RouterLink
@@ -294,7 +330,8 @@ const handleLogout = async () => {
         @click="isMobileMenuOpen = false"
       >
         <Wallet class="h-4 w-4 shrink-0" />
-        <span :class="['tabular-nums truncate', isCollapsed && 'md:sr-only']">{{ formatMoney(walletStore.balance, walletStore.currency) }}</span>
+        <span :class="['text-white/50 light:text-gray-500', isCollapsed && 'md:sr-only']">{{ $t('wallet.balanceShort') }}</span>
+        <span :class="['ml-auto tabular-nums truncate', isCollapsed && 'md:sr-only']">{{ formatMoney(walletStore.balance, walletStore.currency) }}</span>
       </RouterLink>
 
       <!-- User Menu -->
@@ -321,6 +358,7 @@ const handleLogout = async () => {
       </div>
       <ActiveCallPanel />
       <ScrollToTop />
+      <HelpAssistant />
     </main>
   </div>
 </template>

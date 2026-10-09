@@ -40,6 +40,8 @@ type ContactResponse struct {
 	LastInboundAt      *time.Time `json:"last_inbound_at,omitempty"`
 	ServiceWindowOpen  bool       `json:"service_window_open"`
 	MarketingOptOut    bool       `json:"marketing_opt_out"`
+	ConversationStatus string     `json:"conversation_status"`
+	BotPaused          bool       `json:"bot_paused"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }
@@ -63,6 +65,7 @@ type MessageResponse struct {
 	ReplyToMessage   *ReplyPreview        `json:"reply_to_message,omitempty"`
 	Reactions        []ReactionInfo       `json:"reactions,omitempty"`
 	WhatsAppAccount  string               `json:"whatsapp_account,omitempty"`
+	SentByName       string               `json:"sent_by_name,omitempty"` // agent who sent an outgoing message; empty for bot/API/campaign sends
 	CreatedAt        time.Time            `json:"created_at"`
 	UpdatedAt        time.Time            `json:"updated_at"`
 }
@@ -133,6 +136,32 @@ func (a *App) ListContacts(r *fastglue.Request) error {
 		}
 	}
 
+	// Inbox filters (Open/Closed, Unread, Assigned/Unassigned/Mine, Bot On/Off)
+	args := r.RequestCtx.QueryArgs()
+	switch string(args.Peek("conversation_status")) {
+	case "open":
+		query = query.Where("conversation_status = ?", "open")
+	case "closed":
+		query = query.Where("conversation_status = ?", "closed")
+	}
+	if string(args.Peek("unread")) == "true" {
+		query = query.Where("is_read = ?", false)
+	}
+	switch string(args.Peek("assignment")) {
+	case "assigned":
+		query = query.Where("assigned_user_id IS NOT NULL")
+	case "unassigned":
+		query = query.Where("assigned_user_id IS NULL")
+	case "mine":
+		query = query.Where("assigned_user_id = ?", userID)
+	}
+	switch string(args.Peek("bot")) {
+	case "on":
+		query = query.Where("bot_paused = ?", false)
+	case "off":
+		query = query.Where("bot_paused = ?", true)
+	}
+
 	// Order by last message time (most recent first)
 	query = query.Order("last_message_at DESC NULLS LAST, created_at DESC")
 
@@ -186,6 +215,8 @@ func (a *App) ListContacts(r *fastglue.Request) error {
 			LastInboundAt:      c.LastInboundAt,
 			ServiceWindowOpen:  serviceWindowOpen,
 			MarketingOptOut:    c.MarketingOptOut,
+			ConversationStatus: conversationStatus(c.ConversationStatus),
+			BotPaused:          c.BotPaused,
 			CreatedAt:          c.CreatedAt,
 			UpdatedAt:          c.UpdatedAt,
 		}
@@ -345,7 +376,7 @@ func (a *App) GetMessages(r *fastglue.Request) error {
 		}
 		// For loading older messages, order DESC and limit, then reverse
 		var messages []models.Message
-		if err := msgQuery.Preload("ReplyToMessage").Order("created_at DESC").Limit(limit).Find(&messages).Error; err != nil {
+		if err := msgQuery.Preload("ReplyToMessage").Preload("SentByUser", selectUserName).Order("created_at DESC").Limit(limit).Find(&messages).Error; err != nil {
 			a.Log.Error("Failed to list messages", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to list messages", nil, "")
 		}
@@ -381,7 +412,7 @@ func (a *App) GetMessages(r *fastglue.Request) error {
 	}
 
 	var messages []models.Message
-	if err := msgQuery.Preload("ReplyToMessage").Order("created_at ASC").Offset(offset).Limit(queryLimit).Find(&messages).Error; err != nil {
+	if err := msgQuery.Preload("ReplyToMessage").Preload("SentByUser", selectUserName).Order("created_at ASC").Offset(offset).Limit(queryLimit).Find(&messages).Error; err != nil {
 		a.Log.Error("Failed to list messages", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to list messages", nil, "")
 	}
@@ -397,6 +428,12 @@ func (a *App) GetMessages(r *fastglue.Request) error {
 		"limit":    responseLimit,
 		"has_more": offset > 0,
 	})
+}
+
+// selectUserName preloads only what the chat needs to label agent-sent messages
+// (Unscoped so messages from since-deleted agents keep their name).
+func selectUserName(db *gorm.DB) *gorm.DB {
+	return db.Unscoped().Select("id", "full_name")
 }
 
 // buildMessagesResponse converts messages to response format
@@ -427,6 +464,9 @@ func (a *App) buildMessagesResponse(messages []models.Message) []MessageResponse
 			WhatsAppAccount: m.WhatsAppAccount,
 			CreatedAt:       m.CreatedAt,
 			UpdatedAt:       m.UpdatedAt,
+		}
+		if m.SentByUser != nil {
+			msgResp.SentByName = m.SentByUser.FullName
 		}
 
 		if m.IsReply && m.ReplyToMessageID != nil {
@@ -708,6 +748,7 @@ func (a *App) SendMessage(r *fastglue.Request) error {
 
 	// Build response
 	response := MessageResponse{
+		SentByName:      a.senderName(message.SentByUserID),
 		ID:              message.ID,
 		ContactID:       message.ContactID,
 		Direction:       message.Direction,
@@ -895,6 +936,7 @@ func (a *App) SendMediaMessage(r *fastglue.Request) error {
 	}
 
 	response := MessageResponse{
+		SentByName:      a.senderName(message.SentByUserID),
 		ID:              message.ID,
 		ContactID:       message.ContactID,
 		Direction:       message.Direction,
@@ -1182,6 +1224,65 @@ func (a *App) AssignContact(r *fastglue.Request) error {
 	return r.SendEnvelope(map[string]any{
 		"message":          "Contact assigned successfully",
 		"assigned_user_id": req.UserID,
+	})
+}
+
+// conversationStatus normalises rows created before the column existed.
+func conversationStatus(s string) string {
+	if s == "closed" {
+		return "closed"
+	}
+	return "open"
+}
+
+// UpdateConversationRequest changes a contact's inbox state; omitted fields are left as-is.
+type UpdateConversationRequest struct {
+	Status    *string `json:"status"`
+	BotPaused *bool   `json:"bot_paused"`
+}
+
+// UpdateConversation opens/closes a conversation and turns the chatbot on/off for one contact.
+func (a *App) UpdateConversation(r *fastglue.Request) error {
+	orgID, userID, err := a.getOrgAndUserID(r)
+	if err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
+	}
+	contactID, err := parsePathUUID(r, "id", "contact")
+	if err != nil {
+		return nil
+	}
+	var req UpdateConversationRequest
+	if err := a.decodeRequest(r, &req); err != nil {
+		return nil
+	}
+
+	query := a.scopeAssignedContact(a.ScopeToOrg(a.DB, userID, orgID), userID, orgID)
+	var contact models.Contact
+	if err := query.Where("id = ?", contactID).First(&contact).Error; err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusNotFound, "Contact not found", nil, "")
+	}
+
+	updates := map[string]any{}
+	if req.Status != nil {
+		if *req.Status != "open" && *req.Status != "closed" {
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "status must be open or closed", nil, "")
+		}
+		updates["conversation_status"] = *req.Status
+	}
+	if req.BotPaused != nil {
+		updates["bot_paused"] = *req.BotPaused
+	}
+	if len(updates) == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Nothing to update", nil, "")
+	}
+	if err := a.DB.Model(&contact).Updates(updates).Error; err != nil {
+		a.Log.Error("Failed to update conversation", "error", err, "contact_id", contactID)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to update conversation", nil, "")
+	}
+
+	return r.SendEnvelope(map[string]any{
+		"conversation_status": conversationStatus(contact.ConversationStatus),
+		"bot_paused":          contact.BotPaused,
 	})
 }
 
@@ -1624,6 +1725,8 @@ func (a *App) buildContactResponse(contact *models.Contact, orgID uuid.UUID) Con
 		LastInboundAt:      contact.LastInboundAt,
 		ServiceWindowOpen:  serviceWindowOpen,
 		MarketingOptOut:    contact.MarketingOptOut,
+		ConversationStatus: conversationStatus(contact.ConversationStatus),
+		BotPaused:          contact.BotPaused,
 		CreatedAt:          contact.CreatedAt,
 		UpdatedAt:          contact.UpdatedAt,
 	}

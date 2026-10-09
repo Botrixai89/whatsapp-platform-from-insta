@@ -118,7 +118,7 @@ func (a *App) AdminGetStats(r *fastglue.Request) error {
 	var dirRows []dirRow
 	a.DB.Model(&models.Message{}).
 		Select("date_trunc('day', created_at) AS day, direction, COUNT(*) AS n").
-		Where("created_at >= ?", since).Group("1, 2").Scan(&dirRows)
+		Where("created_at >= ?", since).Group("date_trunc('day', created_at), direction").Scan(&dirRows)
 	for _, row := range dirRows {
 		if i, ok := index[row.Day.Format("2006-01-02")]; ok {
 			if row.Direction == string(models.DirectionOutgoing) {
@@ -135,7 +135,7 @@ func (a *App) AdminGetStats(r *fastglue.Request) error {
 	var spendRows []amtRow
 	a.DB.Model(&models.MessageCharge{}).
 		Select("date_trunc('day', created_at) AS day, COALESCE(SUM(amount),0) AS amount").
-		Where("state = ? AND created_at >= ?", models.ChargeStateCharged, since).Group("1").Scan(&spendRows)
+		Where("state = ? AND created_at >= ?", models.ChargeStateCharged, since).Group("date_trunc('day', created_at)").Scan(&spendRows)
 	for _, row := range spendRows {
 		if i, ok := index[row.Day.Format("2006-01-02")]; ok {
 			series[i].Spend = row.Amount
@@ -148,7 +148,7 @@ func (a *App) AdminGetStats(r *fastglue.Request) error {
 	var signupRows []cntRow
 	a.DB.Model(&models.Organization{}).
 		Select("date_trunc('day', created_at) AS day, COUNT(*) AS n").
-		Where("created_at >= ?", since).Group("1").Scan(&signupRows)
+		Where("created_at >= ?", since).Group("date_trunc('day', created_at)").Scan(&signupRows)
 	for _, row := range signupRows {
 		if i, ok := index[row.Day.Format("2006-01-02")]; ok {
 			series[i].Signups = row.N
@@ -363,7 +363,7 @@ func (a *App) AdminGetClient(r *fastglue.Request) error {
 	var dirRows []dirRow
 	a.DB.Model(&models.Message{}).
 		Select("date_trunc('day', created_at) AS day, direction, COUNT(*) AS n").
-		Where("organization_id = ? AND created_at >= ?", id, since).Group("1, 2").Scan(&dirRows)
+		Where("organization_id = ? AND created_at >= ?", id, since).Group("date_trunc('day', created_at), direction").Scan(&dirRows)
 	for _, row := range dirRows {
 		if i, ok := index[row.Day.Format("2006-01-02")]; ok {
 			if row.Direction == string(models.DirectionOutgoing) {
@@ -381,7 +381,7 @@ func (a *App) AdminGetClient(r *fastglue.Request) error {
 	a.DB.Model(&models.MessageCharge{}).
 		Select("date_trunc('day', created_at) AS day, COALESCE(SUM(amount),0) AS amount").
 		Where("organization_id = ? AND state = ? AND created_at >= ?", id, models.ChargeStateCharged, since).
-		Group("1").Scan(&spendRows)
+		Group("date_trunc('day', created_at)").Scan(&spendRows)
 	for _, row := range spendRows {
 		if i, ok := index[row.Day.Format("2006-01-02")]; ok {
 			series[i].Spend = row.Amount

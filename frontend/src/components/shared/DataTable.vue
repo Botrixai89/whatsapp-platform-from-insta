@@ -201,14 +201,14 @@ function getRowKey(item: T, index: number): string {
 
       <!-- Empty State -->
       <TableRow v-else-if="sortedItems.length === 0">
-        <TableCell :colspan="columns.length" class="h-24 text-center text-muted-foreground">
+        <TableCell :colspan="columns.length" class="h-24 py-12 text-center text-muted-foreground hover:bg-transparent">
           <slot name="empty">
-            <div v-if="emptyIcon" class="mb-3 mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-primary/5 ring-1 ring-primary/10">
-              <component :is="emptyIcon" class="h-7 w-7 text-primary/60" />
+            <div v-if="emptyIcon" class="mb-3 mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.04] ring-1 ring-white/[0.08] light:bg-gray-100 light:ring-gray-200">
+              <component :is="emptyIcon" class="h-5 w-5 text-white/50 light:text-gray-500" />
             </div>
-            <p v-if="emptyTitle">{{ emptyTitle }}</p>
-            <p v-if="emptyDescription" class="text-sm">{{ emptyDescription }}</p>
-            <div class="mt-3">
+            <p v-if="emptyTitle" class="font-medium text-foreground">{{ emptyTitle }}</p>
+            <p v-if="emptyDescription" class="mt-1 text-sm">{{ emptyDescription }}</p>
+            <div class="mt-4">
               <slot name="empty-action" />
             </div>
           </slot>

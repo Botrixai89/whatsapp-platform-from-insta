@@ -189,8 +189,11 @@ export const accountsService = {
 }
 
 export const contactsService = {
-  list: (params?: { search?: string; page?: number; limit?: number; tags?: string }) =>
-    api.get('/contacts', { params }),
+  list: (params?: {
+    search?: string; page?: number; limit?: number; tags?: string
+    conversation_status?: 'open' | 'closed'; unread?: boolean
+    assignment?: 'assigned' | 'unassigned' | 'mine'; bot?: 'on' | 'off'
+  }) => api.get('/contacts', { params }),
   get: (id: string) => api.get(`/contacts/${id}`),
   create: (data: any) => api.post('/contacts', data),
   update: (id: string, data: any) => api.put(`/contacts/${id}`, data),
@@ -200,6 +203,8 @@ export const contactsService = {
   updateTags: (id: string, tags: string[]) =>
     api.put(`/contacts/${id}/tags`, { tags }),
   getSessionData: (id: string) => api.get(`/contacts/${id}/session-data`),
+  updateConversation: (id: string, data: { status?: 'open' | 'closed'; bot_paused?: boolean }) =>
+    api.put<{ data: { conversation_status: 'open' | 'closed'; bot_paused: boolean } }>(`/contacts/${id}/conversation`, data),
   markRead: (id: string) => api.post(`/contacts/${encodeURIComponent(id)}/mark-read`)
 }
 
@@ -1145,7 +1150,8 @@ export interface CallTransfer {
   caller_phone: string
   contact_id: string
   whatsapp_account: string
-  status: 'waiting' | 'connected' | 'completed' | 'abandoned' | 'no_answer'
+  // 'connecting' is client-only, set while the agent's media session is being set up
+  status: 'waiting' | 'connecting' | 'connected' | 'completed' | 'abandoned' | 'no_answer'
   team_id?: string
   agent_id?: string
   initiating_agent_id?: string
@@ -1434,6 +1440,99 @@ export const adminService = {
   updateRate: (id: string, data: { organization_id?: string; country_code: string; country_name?: string; category: string; price: number }) =>
     api.put<{ data: MessageRate }>(`/admin/rates/${id}`, data),
   deleteRate: (id: string) => api.delete(`/admin/rates/${id}`),
+}
+
+// ============================================================================
+// AI template agent & template analytics
+// ============================================================================
+
+export interface TemplateAIButton {
+  type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER' | 'COPY_CODE'
+  text: string
+  url?: string
+  example?: string
+  phone_number?: string
+}
+
+export interface TemplateAIDraft {
+  name: string
+  display_name: string
+  category: string
+  language: string
+  header_type: string
+  header_content: string
+  body_content: string
+  footer_content: string
+  buttons: TemplateAIButton[]
+  sample_values: Array<{ component: string; index: number; value: string }>
+  warnings: string[]
+}
+
+export interface TemplateAIRequest {
+  prompt: string
+  category: string
+  language: string
+  style: 'normal' | 'poetic' | 'exciting' | 'funny'
+  optimize_for: 'click' | 'reply'
+  header_type: string
+  variations: number
+}
+
+export interface TemplateAIPrompt {
+  id: string
+  prompt: string
+  category: string
+  language: string
+  style: string
+  optimize_for: string
+  header_type: string
+  created_at: string
+}
+
+export interface TemplateUsageRow {
+  id: string
+  name: string
+  display_name: string
+  language: string
+  category: string
+  status: string
+  whatsapp_account: string
+  quality_rating: string
+  sent: number
+  delivered: number
+  read: number
+  failed: number
+  spend: number
+  last_sent_at: string | null
+}
+
+export interface TemplateAnalytics {
+  from: string
+  to: string
+  status_counts: Record<string, number>
+  totals: { sent: number; delivered: number; read: number; failed: number; spend: number }
+  templates: TemplateUsageRow[]
+  daily: Array<{ date: string; sent: number; delivered: number; read: number }>
+  currency: string
+}
+
+export interface AssistantChatPayload {
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>
+  current_page: string
+  destinations: Array<{ id: string; title: string; description: string }>
+}
+
+export const assistantService = {
+  chat: (payload: AssistantChatPayload) =>
+    api.post<{ data: { reply: string; links: string[] } }>('/assistant/chat', payload),
+}
+
+export const templateAIService = {
+  generate: (data: TemplateAIRequest) =>
+    api.post<{ data: { variations: TemplateAIDraft[]; provider: string; model: string } }>('/templates/ai/generate', data, { timeout: 120000 }),
+  prompts: () => api.get<{ data: { prompts: TemplateAIPrompt[] } }>('/templates/ai/prompts'),
+  analytics: (params?: { from?: string; to?: string; account?: string }) =>
+    api.get<{ data: TemplateAnalytics }>('/templates/analytics', { params }),
 }
 
 export default api

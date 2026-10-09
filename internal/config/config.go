@@ -159,10 +159,13 @@ type WhatsAppConfig struct {
 	ConfigID           string `koanf:"config_id"` // WhatsApp Config ID for frontend
 }
 
+// AIConfig holds platform-level AI keys. They power the AI template agent
+// for clients that have not configured their own chatbot AI provider.
 type AIConfig struct {
-	OpenAIKey    string `koanf:"openai_key"`
-	AnthropicKey string `koanf:"anthropic_key"`
-	GoogleKey    string `koanf:"google_key"`
+	OpenAIKey     string `koanf:"openai_key"`
+	AnthropicKey  string `koanf:"anthropic_key"`
+	GoogleKey     string `koanf:"google_key"`
+	TemplateModel string `koanf:"template_model"` // optional model override for the template agent
 }
 
 type StorageConfig struct {

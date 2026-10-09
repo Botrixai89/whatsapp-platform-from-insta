@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Botrixai89/botrixai/internal/contactutil"
 	"github.com/Botrixai89/botrixai/internal/models"
@@ -702,8 +703,8 @@ func (a *App) processMessageEcho(phoneNumberID string, msg IncomingTextMessage) 
 
 	// Update contact's last message info
 	preview := messageText
-	if len(preview) > 100 {
-		preview = preview[:97] + "..."
+	if utf8.RuneCountInString(preview) > 100 {
+		preview = truncateRunes(preview, 97) + "..."
 	}
 	if messageType != "text" && messageType != "button_reply" && messageType != "nfm_reply" {
 		preview = "[" + messageType + "]"

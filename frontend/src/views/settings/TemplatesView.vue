@@ -9,10 +9,11 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader, SearchInput, DataTable, IconButton, DeleteConfirmDialog, ErrorState, type Column } from '@/components/shared'
-import { api, templatesService } from '@/services/api'
+import { api, templatesService, templateAIService } from '@/services/api'
+import TemplateStatusCards from './templates/TemplateStatusCards.vue'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { toast } from 'vue-sonner'
-import { Plus, RefreshCw, FileText, Pencil, Trash2, Loader2, MessageSquare, Image, FileIcon, Video } from 'lucide-vue-next'
+import { Plus, RefreshCw, FileText, Pencil, Trash2, Loader2, MessageSquare, Image, FileIcon, Video, Sparkles, BarChart3 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/api-utils'
 import { useSearchPagination } from '@/composables/useSearchPagination'
 import { getQualityBadgeClass, getQualityRatingLabel } from '@/lib/utils'
@@ -160,6 +161,18 @@ watch(() => organizationsStore.selectedOrgId, async () => {
   await fetchTemplates()
 })
 
+// Template counts by status
+const statusCounts = ref<Record<string, number> | null>(null)
+async function fetchStatusCounts() {
+  try {
+    const res = await templateAIService.analytics({ account: selectedAccount.value !== 'all' ? selectedAccount.value : undefined })
+    statusCounts.value = res.data.data.status_counts
+  } catch {
+    statusCounts.value = null
+  }
+}
+watch(templates, fetchStatusCounts)
+
 onMounted(async () => {
   await fetchAccounts()
   await fetchTemplates()
@@ -296,17 +309,29 @@ function getHeaderIcon(type: string) {
 
 <template>
   <div class="flex flex-col h-full bg-[#0a0a0b] light:bg-gray-50">
-    <PageHeader :title="$t('templates.title')" :subtitle="$t('templates.subtitle')" :icon="FileText" icon-gradient="bg-gradient-to-br from-blue-500 to-cyan-600 shadow-blue-500/20">
+    <PageHeader :title="$t('templates.title')" :subtitle="$t('templates.subtitle')" :icon="FileText">
       <template #actions>
         <Button variant="outline" size="sm" @click="syncTemplates" :disabled="isSyncing || !selectedAccount || selectedAccount === 'all'">
           <Loader2 v-if="isSyncing" class="h-4 w-4 mr-2 animate-spin" />
           <RefreshCw v-else class="h-4 w-4 mr-2" />
           {{ $t('templates.syncFromMeta') }}
         </Button>
+        <RouterLink to="/templates/analytics">
+          <Button variant="outline" size="sm">
+            <BarChart3 class="h-4 w-4 mr-2" />
+            {{ $t('templateAI.analyticsButton') }}
+          </Button>
+        </RouterLink>
         <RouterLink to="/templates/new">
           <Button variant="outline" size="sm">
             <Plus class="h-4 w-4 mr-2" />
             {{ $t('templates.createTemplate') }}
+          </Button>
+        </RouterLink>
+        <RouterLink to="/templates/new?ai=1">
+          <Button size="sm">
+            <Sparkles class="h-4 w-4 mr-2" />
+            {{ $t('templateAI.createWithAI') }}
           </Button>
         </RouterLink>
       </template>
@@ -314,7 +339,8 @@ function getHeaderIcon(type: string) {
 
     <ScrollArea class="flex-1">
       <div class="p-6">
-        <div>
+        <div class="space-y-6">
+          <TemplateStatusCards :counts="statusCounts" />
           <ErrorState
             v-if="error && !isLoading"
             :title="$t('common.loadErrorTitle')"

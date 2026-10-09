@@ -2,7 +2,7 @@
 import { ref, watch, onMounted, onUnmounted, nextTick, computed, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useContactsStore, type Contact, type Message } from '@/stores/contacts'
+import { useContactsStore, type Contact, type Message, type InboxFilters } from '@/stores/contacts'
 import { useAuthStore } from '@/stores/auth'
 import { useUsersStore } from '@/stores/users'
 import { useTransfersStore } from '@/stores/transfers'
@@ -16,7 +16,6 @@ import { compressImage } from '@/lib/imageCompression'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Spinner } from '@/components/ui/spinner'
@@ -88,24 +87,30 @@ import {
   Globe,
   Code,
   RotateCw,
+  RotateCcw,
   Filter,
-  StickyNote
+  StickyNote,
+  Lock,
+  Bot,
+  PowerOff,
+  CheckCircle2,
+  LayoutTemplate
 } from 'lucide-vue-next'
-import { getInitials, getAvatarGradient } from '@/lib/utils'
 import { useColorMode } from '@/composables/useColorMode'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import CannedResponsePicker from '@/components/chat/CannedResponsePicker.vue'
 import PreviewButtonGroup from '@/components/chatbot/flow-preview/PreviewButtonGroup.vue'
 import TemplatePicker from '@/components/chat/TemplatePicker.vue'
+import WaAvatar from '@/components/chat/WaAvatar.vue'
 import MediaViewerDialog from '@/components/chat/MediaViewerDialog.vue'
 import ContactInfoPanel from '@/components/chat/ContactInfoPanel.vue'
 import ConversationNotes from '@/components/chat/ConversationNotes.vue'
 import CallButton from '@/components/calling/CallButton.vue'
 import { useNotesStore } from '@/stores/notes'
 import { useHeaderMedia } from '@/composables/useHeaderMedia'
-import { CreateContactDialog } from '@/components/shared'
+import { CreateContactDialog, BrandLogo } from '@/components/shared'
 import HeaderMediaUpload from '@/components/shared/HeaderMediaUpload.vue'
-import { Info } from 'lucide-vue-next'
+import { Info, MessageSquarePlus } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -187,7 +192,6 @@ let stickyDateTimeout: ReturnType<typeof setTimeout> | null = null
 const emojiPickerOpen = ref(false)
 
 // Template picker state
-const templatePickerRef = ref<HTMLElement | null>(null)
 const templateDialogOpen = ref(false)
 const selectedTemplate = ref<any>(null)
 const templateParamNames = ref<string[]>([])
@@ -223,11 +227,6 @@ const isServiceWindowExpired = computed(() => {
   return contact.service_window_open === false
 })
 
-function openTemplatePicker() {
-  const btn = templatePickerRef.value?.querySelector('button')
-  btn?.click()
-}
-
 // Add contact dialog state
 const isAddContactOpen = ref(false)
 
@@ -259,11 +258,6 @@ const messagesScroll = useInfiniteScroll({
     await messagesScroll.preserveScrollPosition(async () => {
       await contactsStore.fetchOlderMessages(contactsStore.currentContact!.id, selectedAccount.value || undefined)
       await nextTick()
-      // Load media for any new messages
-      try {
-      } catch (e) {
-        console.error('Error loading media:', e)
-      }
     })
   },
   hasMore: computed(() => contactsStore.hasMoreMessages),
@@ -622,11 +616,6 @@ async function selectContact(id: string) {
     wsService.setCurrentContact(id)
     // Wait for DOM to render messages before scrolling
     await nextTick()
-    // Load media for messages after messages are fetched
-    try {
-    } catch (e) {
-      console.error('Error loading media:', e)
-    }
     // Scroll after a brief delay to ensure content is rendered (instant on initial load)
     setTimeout(() => {
       scrollToBottom(true)
@@ -681,24 +670,12 @@ watch(() => contactsStore.messages.length, (newLen, oldLen) => {
   }
 })
 
-// Watch for messages changes to load media
-watch(() => contactsStore.messages, () => {
-  try {
-  } catch (e) {
-    console.error('Error loading media:', e)
-  }
-}, { deep: true })
-
 async function switchAccount(accountName: string) {
   if (!contactsStore.currentContact || accountName === selectedAccount.value) return
   selectedAccount.value = accountName
   contactsStore.setAccountFilter(accountName)
   await contactsStore.fetchMessages(contactsStore.currentContact.id, { account: accountName })
   await nextTick()
-  try {
-  } catch (e) {
-    console.error('Error loading media:', e)
-  }
   scrollToBottom(true)
 }
 
@@ -1348,12 +1325,127 @@ function getDateLabel(dateStr: string): string {
   const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const diffDays = Math.floor((today.getTime() - messageDate.getTime()) / 86400000)
 
-  if (diffDays === 0) {
-    return 'Today'
-  } else if (diffDays === 1) {
-    return 'Yesterday'
+  if (diffDays === 0) return t('chat.today', 'Today')
+  if (diffDays === 1) return t('chat.yesterday', 'Yesterday')
+  if (diffDays < 7) return date.toLocaleDateString(undefined, { weekday: 'long' })
+  return date.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+// First message of a run from the same side gets the bubble tail and extra spacing
+function isFirstInGroup(index: number): boolean {
+  if (index === 0) return true
+  const messages = contactsStore.messages
+  return messages[index].direction !== messages[index - 1].direction || shouldShowDateSeparator(index)
+}
+
+// Label outgoing bubbles with their sender only when it changes, so a run of
+// bot messages isn't stamped "Bot / API" on every day
+function showSenderLabel(index: number): boolean {
+  const messages = contactsStore.messages
+  const msg = messages[index]
+  if (msg.direction !== 'outgoing') return false
+  for (let i = index - 1; i >= 0; i--) {
+    if (messages[i].direction === 'outgoing') {
+      return (messages[i].sent_by_name || '') !== (msg.sent_by_name || '')
+    }
   }
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  return true
+}
+
+/** Turns raw Meta API errors into something an agent can act on. */
+function friendlyError(raw?: string): string {
+  if (!raw) return t('chat.failedGeneric', 'WhatsApp did not accept this message.')
+  if (/\b190\b|OAuth|access token/i.test(raw)) return t('chat.failedToken', 'The WhatsApp access token is invalid or expired. Reconnect the number in Settings → Accounts.')
+  if (/131047|24.?hour|re-engagement/i.test(raw)) return t('chat.failedWindow', 'The 24-hour window has closed. Send a template instead.')
+  if (/131026|undeliverable/i.test(raw)) return t('chat.failedUndeliverable', 'This number can\'t receive WhatsApp messages.')
+  if (/insufficient|balance/i.test(raw)) return t('chat.failedBalance', 'Wallet balance is too low to send this message.')
+  return raw
+}
+
+// Inbox filter chips (single-select, like WhatsApp's All / Unread chips), remembered per browser
+type InboxTab = 'all' | 'unread' | 'open' | 'closed' | 'mine' | 'unassigned' | 'assigned' | 'bot_off'
+const INBOX_STORAGE_KEY = 'chat_inbox_tab'
+const INBOX_TABS: InboxTab[] = ['all', 'unread', 'open', 'closed', 'mine', 'unassigned', 'assigned', 'bot_off']
+function readInboxTab(): InboxTab {
+  try {
+    const saved = localStorage.getItem(INBOX_STORAGE_KEY) as InboxTab | null
+    return saved && INBOX_TABS.includes(saved) ? saved : 'open'
+  } catch {
+    return 'open'
+  }
+}
+const inboxTab = ref<InboxTab>(readInboxTab())
+const inboxTabs = computed(() => [
+  { key: 'all' as const, label: t('chat.tabAll', 'All') },
+  { key: 'unread' as const, label: t('chat.tabUnread', 'Unread') },
+  { key: 'open' as const, label: t('chat.tabOpen', 'Open') },
+  { key: 'closed' as const, label: t('chat.tabClosed', 'Closed') },
+  { key: 'mine' as const, label: t('chat.tabMine', 'Mine') },
+  { key: 'unassigned' as const, label: t('chat.tabUnassigned', 'Unassigned') },
+  { key: 'assigned' as const, label: t('chat.tabAssigned', 'Assigned') },
+  { key: 'bot_off' as const, label: t('chat.tabBotOff', 'Bot off') },
+])
+
+function inboxFiltersFor(tab: InboxTab): InboxFilters {
+  switch (tab) {
+    case 'open': return { status: 'open' }
+    case 'closed': return { status: 'closed' }
+    case 'unread': return { unread: true }
+    case 'mine': return { assignment: 'mine' }
+    case 'assigned': return { assignment: 'assigned' }
+    case 'unassigned': return { assignment: 'unassigned' }
+    case 'bot_off': return { bot: 'off' }
+    default: return {}
+  }
+}
+contactsStore.inboxFilters = inboxFiltersFor(inboxTab.value)
+
+watch(inboxTab, (tab) => {
+  try { localStorage.setItem(INBOX_STORAGE_KEY, tab) } catch { /* storage unavailable */ }
+  contactsStore.inboxFilters = inboxFiltersFor(tab)
+  contactsStore.fetchContacts()
+})
+
+const emptyListMessage = computed(() => {
+  if (contactsStore.searchQuery) return t('chat.noContacts')
+  const labels: Partial<Record<InboxTab, string>> = {
+    unread: t('chat.emptyUnread', 'No unread chats'),
+    open: t('chat.emptyOpen', 'No open chats. You\'re all caught up.'),
+    closed: t('chat.emptyClosed', 'No closed chats'),
+    mine: t('chat.emptyMine', 'No chats assigned to you'),
+    unassigned: t('chat.emptyUnassigned', 'Every chat has an owner'),
+    assigned: t('chat.emptyAssigned', 'No assigned chats'),
+    bot_off: t('chat.emptyBotOff', 'The bot is on for every chat'),
+  }
+  return labels[inboxTab.value] || t('chat.noContacts')
+})
+
+// Keeps the list honest after a toggle, e.g. a chat closed while viewing "Open"
+const visibleContacts = computed(() => {
+  const f = contactsStore.inboxFilters
+  return contactsStore.sortedContacts.filter(c =>
+    (!f.status || (c.conversation_status || 'open') === f.status) &&
+    (!f.bot || (f.bot === 'off') === !!c.bot_paused)
+  )
+})
+
+// Conversation state toggles in the chat header
+const isUpdatingConversation = ref(false)
+const isChatClosed = computed(() => contactsStore.currentContact?.conversation_status === 'closed')
+const isBotPaused = computed(() => !!contactsStore.currentContact?.bot_paused)
+async function setConversation(patch: { status?: 'open' | 'closed'; bot_paused?: boolean }) {
+  const contact = contactsStore.currentContact
+  if (!contact || isUpdatingConversation.value) return
+  isUpdatingConversation.value = true
+  try {
+    // No success toast: the segmented control already shows the new state, and a
+    // toast would sit on top of these very controls in the header.
+    await contactsStore.updateConversation(contact.id, patch)
+  } catch (e) {
+    toast.error(getErrorMessage(e, t('chat.conversationUpdateFailed', 'Could not update this chat')))
+  } finally {
+    isUpdatingConversation.value = false
+  }
 }
 
 function shouldShowDateSeparator(index: number): boolean {
@@ -1703,20 +1795,14 @@ async function sendMediaMessage() {
 </script>
 
 <template>
-  <div class="flex h-full bg-[#0a0a0b] light:bg-gray-50">
+  <div class="wa-app flex flex-col h-full">
+    <div class="flex flex-1 min-h-0">
     <!-- Contacts List -->
-    <div class="w-80 border-r border-white/[0.08] light:border-gray-200 flex flex-col bg-[#0a0a0b] light:bg-white">
-      <!-- Search Header -->
-      <div class="p-2 border-b border-white/[0.08] light:border-gray-200">
-        <div class="flex items-center gap-2">
-          <div class="relative flex-1">
-            <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40 light:text-gray-400" />
-            <Input
-              v-model="contactsStore.searchQuery"
-              :placeholder="$t('chat.searchContacts') + '...'"
-              class="pl-8 h-8 text-sm bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/40 light:bg-gray-50 light:border-gray-200 light:text-gray-900 light:placeholder:text-gray-400"
-            />
-          </div>
+    <div class="wa-sidebar w-[30%] min-w-[320px] max-w-[440px] flex flex-col">
+      <!-- Header -->
+      <div class="wa-panel-header h-[59px] px-4 flex items-center justify-between shrink-0">
+        <h2 class="text-[21px] font-semibold wa-title">{{ $t('chat.chats', 'Chats') }}</h2>
+        <div class="flex items-center gap-1">
           <!-- Add Contact -->
           <Tooltip v-if="canWriteContacts">
             <TooltipTrigger as-child>
@@ -1724,10 +1810,10 @@ async function sendMediaMessage() {
                 variant="ghost"
                 size="icon"
                 :aria-label="$t('chat.addContact')"
-                class="h-8 w-8 shrink-0 text-white/40 hover:text-white hover:bg-white/[0.08] light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100"
+                class="h-9 w-9 shrink-0 rounded-full wa-icon-btn"
                 @click="openAddContactDialog"
               >
-                <UserPlus class="h-4 w-4" />
+                <MessageSquarePlus class="h-5 w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{{ $t('chat.addContact') }}</TooltipContent>
@@ -1738,10 +1824,10 @@ async function sendMediaMessage() {
               <Button
                 variant="ghost"
                 size="icon"
-                class="h-8 w-8 shrink-0 relative"
-                :class="contactsStore.selectedTags.length > 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-white/40 hover:text-white hover:bg-white/[0.08] light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100'"
+                class="h-9 w-9 shrink-0 relative"
+                :class="contactsStore.selectedTags.length > 0 ? 'text-emerald-400 bg-emerald-500/10 rounded-full' : 'rounded-full wa-icon-btn'"
               >
-                <Filter class="h-4 w-4" />
+                <Filter class="h-[18px] w-[18px]" />
                 <span v-if="contactsStore.selectedTags.length > 0" class="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 text-[10px] text-white flex items-center justify-center">
                   {{ contactsStore.selectedTags.length }}
                 </span>
@@ -1785,6 +1871,29 @@ async function sendMediaMessage() {
             </PopoverContent>
           </Popover>
         </div>
+      </div>
+
+      <!-- Search + quick filters -->
+      <div class="px-3 pt-2 pb-2 space-y-2 shrink-0">
+          <div class="relative">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 wa-subtle z-10" />
+            <Input
+              v-model="contactsStore.searchQuery"
+              :placeholder="$t('chat.searchOrStart', 'Search or start a new chat')"
+              class="wa-search pl-10 h-9 text-sm focus-visible:ring-1 focus-visible:ring-[var(--wa-accent)]"
+            />
+          </div>
+        <div class="wa-chips flex items-center gap-2 overflow-x-auto -mx-3 px-3" role="tablist" :aria-label="$t('chat.filterChats', 'Filter chats')">
+          <button
+            v-for="tab in inboxTabs"
+            :key="tab.key"
+            type="button"
+            role="tab"
+            :aria-selected="inboxTab === tab.key"
+            :class="['wa-chip shrink-0', inboxTab === tab.key && 'is-active']"
+            @click="inboxTab = tab.key"
+          >{{ tab.label }}</button>
+        </div>
         <!-- Active tag filters -->
         <div v-if="contactsStore.selectedTags.length > 0" class="flex flex-wrap gap-1 mt-2">
           <TagBadge
@@ -1804,39 +1913,28 @@ async function sendMediaMessage() {
       <ScrollArea :ref="(el: any) => contactsScroll.scrollAreaRef.value = el" orientation="vertical" class="flex-1">
         <div class="py-1 w-full">
           <div
-            v-for="contact in contactsStore.sortedContacts"
+            v-for="contact in visibleContacts"
             :key="contact.id"
-            :class="[
-              'flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-white/[0.04] light:hover:bg-gray-50 transition-colors',
-              contactsStore.currentContact?.id === contact.id && 'bg-white/[0.08] light:bg-gray-100'
-            ]"
+            :class="['wa-contact flex items-center gap-3 pl-3', contactsStore.currentContact?.id === contact.id && 'is-active']"
             @click="handleContactClick(contact)"
           >
-            <Avatar class="h-9 w-9 ring-2 ring-white/[0.1] light:ring-gray-200">
-              <AvatarImage :src="contact.avatar_url" />
-              <AvatarFallback :class="'text-xs bg-gradient-to-br text-white ' + getAvatarGradient(contact.name || contact.phone_number)">
-                {{ getInitials(contact.name || contact.phone_number) }}
-              </AvatarFallback>
-            </Avatar>
-            <div class="flex-1 min-w-0">
+            <WaAvatar :src="contact.avatar_url" class="h-[49px] w-[49px] shrink-0" />
+            <div class="wa-contact-body flex-1 min-w-0 py-3 pr-3">
               <div class="flex items-center justify-between gap-2">
-                <p
-                  class="flex-1 min-w-0 text-sm font-medium truncate text-white light:text-gray-900"
-                  :title="contact.name || contact.phone_number"
-                >
+                <p class="wa-contact-name flex-1 min-w-0 truncate" :title="contact.name || contact.phone_number">
                   {{ contact.name || contact.phone_number }}
                 </p>
-                <span class="flex-shrink-0 text-[11px] text-white/40 light:text-gray-500">
+                <span :class="['wa-contact-time flex-shrink-0', contact.unread_count > 0 && 'has-unread']">
                   {{ formatContactTime(contact.last_message_at) }}
                 </span>
               </div>
-              <div class="flex items-center justify-between gap-2">
-                <p class="flex-1 min-w-0 text-xs text-white/50 light:text-gray-500 truncate">
-                  {{ contact.phone_number }}
+              <div class="flex items-center justify-between gap-2 mt-0.5">
+                <p class="wa-contact-preview flex-1 min-w-0 truncate">
+                  {{ contact.last_message_preview || contact.phone_number }}
                 </p>
-                <Badge v-if="contact.unread_count > 0" class="flex-shrink-0 h-5 text-[10px] bg-emerald-500/20 text-emerald-400 light:bg-emerald-100 light:text-emerald-700">
+                <span v-if="contact.unread_count > 0" class="wa-unread-badge flex-shrink-0">
                   {{ contact.unread_count }}
-                </Badge>
+                </span>
               </div>
             </div>
           </div>
@@ -1846,59 +1944,81 @@ async function sendMediaMessage() {
             <Loader2 class="h-5 w-5 mx-auto animate-spin text-white/40 light:text-gray-400" />
           </div>
 
-          <div v-if="contactsStore.sortedContacts.length === 0" class="p-3 text-center text-white/40 light:text-gray-500">
+          <div v-if="visibleContacts.length === 0" class="p-6 text-center wa-subtle">
             <User class="h-6 w-6 mx-auto mb-1.5 opacity-50" />
-            <p class="text-sm">{{ $t('chat.noContacts') }}</p>
+            <p class="text-sm">{{ emptyListMessage }}</p>
           </div>
         </div>
       </ScrollArea>
     </div>
 
     <!-- Chat Area -->
-    <div class="flex-1 flex flex-col bg-[#0f0f10] light:bg-gray-50">
+    <div class="flex-1 flex flex-col min-w-0">
       <!-- No Contact Selected -->
       <div
         v-if="!contactsStore.currentContact"
-        class="flex-1 flex items-center justify-center text-white/40 light:text-gray-500"
+        class="flex-1 flex items-center justify-center bg-[var(--wa-header)] border-b-[6px] border-[var(--wa-accent)]"
       >
-        <div class="text-center">
-          <div class="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
-            <Send class="h-8 w-8 text-white" />
-          </div>
-          <h3 class="font-medium text-lg mb-1 text-white light:text-gray-900">{{ $t('chat.selectConversation') }}</h3>
-          <p class="text-sm text-white/50 light:text-gray-500">{{ $t('chat.chooseContact') }}</p>
+        <div class="text-center max-w-md px-6">
+          <BrandLogo mark-class="h-20 w-20" :show-text="false" class="mb-6" />
+          <h3 class="text-[32px] font-light wa-title mb-3">BotrixAI Web</h3>
+          <p class="text-sm wa-subtle leading-6">{{ $t('chat.chooseContact') }}</p>
         </div>
       </div>
 
       <!-- Chat Interface -->
       <template v-else>
         <!-- Chat Header -->
-        <div class="h-14 flex-shrink-0 px-4 border-b border-white/[0.08] light:border-gray-200 flex items-center justify-between bg-[#0f0f10] light:bg-white">
-          <div class="flex items-center gap-2">
-            <Avatar class="h-8 w-8 ring-2 ring-white/[0.1] light:ring-gray-200">
-              <AvatarImage :src="contactsStore.currentContact.avatar_url" />
-              <AvatarFallback :class="'text-xs bg-gradient-to-br text-white ' + getAvatarGradient(contactsStore.currentContact.name || contactsStore.currentContact.phone_number)">
-                {{ getInitials(contactsStore.currentContact.name || contactsStore.currentContact.phone_number) }}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <div class="flex items-center gap-1.5">
-                <p class="text-sm font-medium text-white light:text-gray-900">
+        <div class="wa-panel-header h-[59px] flex-shrink-0 px-4 flex items-center justify-between border-l border-[var(--wa-border)]">
+          <div class="flex flex-1 items-center gap-3 min-w-0 cursor-pointer" @click="isInfoPanelOpen = !isInfoPanelOpen">
+            <WaAvatar :src="contactsStore.currentContact.avatar_url" class="h-10 w-10 shrink-0" />
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <p class="text-base wa-title truncate">
                   {{ contactsStore.currentContact.name || contactsStore.currentContact.phone_number }}
                 </p>
-                <Badge v-if="activeTransferId" class="text-[10px] h-5 bg-orange-500/20 text-orange-400 light:bg-orange-100 light:text-orange-700">
-                  Paused
-                </Badge>
-                <Badge v-if="contactsStore.currentContact?.marketing_opt_out" class="text-[10px] h-5 bg-red-500/20 text-red-400 light:bg-red-100 light:text-red-700" :title="$t('chat.marketingOptOut')">
-                  {{ $t('chat.marketingOptOut', 'Marketing Opt-out') }}
-                </Badge>
+                <span v-if="isChatClosed" class="wa-tag">{{ $t('chat.statusClosed', 'Closed') }}</span>
+                <span v-if="activeTransferId" class="wa-tag wa-tag-warn">{{ $t('chat.withAgent', 'With agent') }}</span>
+                <span v-else-if="isBotPaused" class="wa-tag wa-tag-warn">{{ $t('chat.botOff', 'Bot off') }}</span>
+                <span v-if="contactsStore.currentContact?.marketing_opt_out" class="wa-tag wa-tag-danger">{{ $t('chat.marketingOptOut', 'Marketing Opt-out') }}</span>
               </div>
-              <p class="text-[11px] text-white/50 light:text-gray-500">
-                {{ contactsStore.currentContact.phone_number }}
+              <p class="text-[13px] wa-subtle truncate">
+                {{ contactsStore.currentContact.phone_number }} · {{ $t('chat.clickForInfo', 'click here for contact info') }}
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1 shrink-0 ml-2">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <button
+                  type="button"
+                  class="wa-pill-btn hidden lg:inline-flex mr-1"
+                  :disabled="isUpdatingConversation"
+                  @click="setConversation({ status: isChatClosed ? 'open' : 'closed' })"
+                >
+                  <component :is="isChatClosed ? RotateCcw : CheckCircle2" class="h-4 w-4" />
+                  {{ isChatClosed ? $t('chat.reopenChat', 'Reopen chat') : $t('chat.closeChat', 'Close chat') }}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{{ isChatClosed ? $t('chat.reopenHint', 'Move back to open chats') : $t('chat.closeHint', 'Mark as done. It reopens when the customer writes again.') }}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  :class="['h-10 w-10 rounded-full wa-icon-btn relative', isBotPaused && 'wa-icon-btn-warn']"
+                  :aria-label="isBotPaused ? $t('chat.turnBotOn', 'Turn bot on') : $t('chat.turnBotOff', 'Turn bot off')"
+                  :aria-pressed="isBotPaused"
+                  :disabled="isUpdatingConversation"
+                  @click="setConversation({ bot_paused: !isBotPaused })"
+                >
+                  <Bot class="h-5 w-5" />
+                  <span v-if="isBotPaused" class="wa-slash" aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{{ isBotPaused ? $t('chat.botOffHint', 'Bot is off for this chat. Click to turn it on.') : $t('chat.botOnHint', 'Bot is replying in this chat. Click to turn it off.') }}</TooltipContent>
+            </Tooltip>
             <CallButton
               v-if="contactsStore.currentContact?.phone_number && selectedAccount && isBusinessCallingEnabled"
               :contact-id="contactsStore.currentContact.id"
@@ -1908,16 +2028,16 @@ async function sendMediaMessage() {
             />
             <Tooltip v-if="canAssignContacts">
               <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon" class="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.08] light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100" @click="isAssignDialogOpen = true">
-                  <UserPlus class="h-4 w-4" />
+                <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full wa-icon-btn" @click="isAssignDialogOpen = true">
+                  <UserPlus class="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{{ $t('chat.assignToAgent') }}</TooltipContent>
             </Tooltip>
             <Tooltip v-if="activeTransferId">
               <TooltipTrigger as-child>
-                <Button variant="ghost" size="icon" class="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.08] light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100" :disabled="isResuming" @click="resumeChatbot">
-                  <Play class="h-4 w-4" />
+                <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full wa-icon-btn" :disabled="isResuming" @click="resumeChatbot">
+                  <Play class="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{{ $t('chat.resumeChatbot') }}</TooltipContent>
@@ -1928,12 +2048,12 @@ async function sendMediaMessage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  class="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.08] light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100"
+                  class="h-10 w-10 rounded-full wa-icon-btn"
                   :disabled="executingActionId === action.id"
                   @click="executeCustomAction(action)"
                 >
-                  <Loader2 v-if="executingActionId === action.id" class="h-4 w-4 animate-spin" />
-                  <component v-else :is="getActionIcon(action.icon)" class="h-4 w-4" />
+                  <Loader2 v-if="executingActionId === action.id" class="h-5 w-5 animate-spin" />
+                  <component v-else :is="getActionIcon(action.icon)" class="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{{ action.name }}</TooltipContent>
@@ -1944,11 +2064,11 @@ async function sendMediaMessage() {
                   variant="ghost"
                   size="icon"
                   id="notes-button"
-                  class="h-8 w-8 relative text-white/50 hover:text-white hover:bg-white/[0.08] light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100"
-                  :class="isNotesPanelOpen && 'bg-amber-500/10 text-amber-400 light:bg-amber-50 light:text-amber-600'"
+                  class="h-10 w-10 rounded-full wa-icon-btn relative"
+                  :class="isNotesPanelOpen && 'is-active'"
                   @click="isNotesPanelOpen = !isNotesPanelOpen"
                 >
-                  <StickyNote class="h-4 w-4" />
+                  <StickyNote class="h-5 w-5" />
                   <span
                     v-if="notesStore.notes.length > 0 && !isNotesPanelOpen"
                     id="notes-badge"
@@ -1966,23 +2086,35 @@ async function sendMediaMessage() {
                   variant="ghost"
                   size="icon"
                   id="info-button"
-                  class="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.08] light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100"
-                  :class="isInfoPanelOpen && 'bg-white/[0.08] text-white light:bg-gray-100 light:text-gray-900'"
+                  class="h-10 w-10 rounded-full wa-icon-btn"
+                  :class="isInfoPanelOpen && 'is-active'"
                   @click="isInfoPanelOpen = !isInfoPanelOpen"
                 >
-                  <Info class="h-4 w-4" />
+                  <Info class="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{{ $t('chat.contactInfo') }}</TooltipContent>
             </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
-                <Button variant="ghost" size="icon" class="h-8 w-8 text-white/50 hover:text-white hover:bg-white/[0.08] light:text-gray-500 light:hover:text-gray-900 light:hover:bg-gray-100">
-                  <MoreVertical class="h-4 w-4" />
+                <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full wa-icon-btn">
+                  <MoreVertical class="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{{ $t('chat.contactOptions') }}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  :disabled="isUpdatingConversation"
+                  @click="setConversation({ status: contactsStore.currentContact.conversation_status === 'closed' ? 'open' : 'closed' })"
+                >
+                  <CheckCircle2 class="mr-2 h-4 w-4" />
+                  <span>{{ contactsStore.currentContact.conversation_status === 'closed' ? $t('chat.reopenChat', 'Reopen chat') : $t('chat.closeChat', 'Close chat') }}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem :disabled="isUpdatingConversation" @click="setConversation({ bot_paused: !contactsStore.currentContact.bot_paused })">
+                  <component :is="contactsStore.currentContact.bot_paused ? Bot : PowerOff" class="mr-2 h-4 w-4" />
+                  <span>{{ contactsStore.currentContact.bot_paused ? $t('chat.turnBotOn', 'Turn bot on') : $t('chat.turnPowerOff', 'Turn bot off') }}</span>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem v-if="canAssignContacts" @click="isAssignDialogOpen = true">
                   <UserPlus class="mr-2 h-4 w-4" />
@@ -2036,14 +2168,14 @@ async function sendMediaMessage() {
           <Transition name="sticky-date">
             <div
               v-if="showStickyDate"
-              class="absolute top-2 left-1/2 -translate-x-1/2 z-10 px-3 py-1 bg-white/[0.08] light:bg-gray-200 backdrop-blur-sm rounded-full text-[11px] text-white/50 light:text-gray-600 font-medium shadow-sm"
+              class="absolute top-2 left-1/2 -translate-x-1/2 z-10 wa-date-pill"
             >
               {{ stickyDate }}
             </div>
           </Transition>
 
-          <ScrollArea :ref="(el: any) => messagesScroll.scrollAreaRef.value = el" class="h-full p-3 chat-background">
-            <div class="space-y-2">
+          <ScrollArea :ref="(el: any) => messagesScroll.scrollAreaRef.value = el" class="h-full chat-background">
+            <div class="px-4 md:px-[6%] py-3">
               <!-- Loading indicator for older messages -->
               <div v-if="contactsStore.isLoadingOlderMessages" class="flex justify-center py-2">
                 <div class="flex items-center gap-2 text-white/40 light:text-gray-500 text-sm">
@@ -2061,7 +2193,7 @@ async function sendMediaMessage() {
                   class="flex items-center justify-center my-4"
                   :data-date-separator="getDateLabel(message.created_at)"
                 >
-                  <div class="px-3 py-1 bg-white/[0.06] light:bg-gray-200 rounded-full text-[11px] text-white/40 light:text-gray-600 font-medium">
+                  <div class="wa-date-pill">
                     {{ getDateLabel(message.created_at) }}
                   </div>
                 </div>
@@ -2072,7 +2204,7 @@ async function sendMediaMessage() {
                   v-if="newMessagesCount > 0 && message.id === firstUnreadId"
                   class="flex items-center justify-center my-4"
                 >
-                  <div class="px-3 py-1 bg-white/[0.06] light:bg-gray-200 rounded-full text-[11px] text-white/40 light:text-gray-600 font-medium">
+                  <div class="wa-date-pill">
                     {{ newMessagesCount }} {{ newMessagesCount === 1 ? $t('chat.unreadMessage', 'unread message') : $t('chat.unreadMessages', 'unread messages') }}
                   </div>
                 </div>
@@ -2082,15 +2214,21 @@ async function sendMediaMessage() {
                 :id="`message-${message.id}`"
                 :class="[
                   'flex group',
-                  message.direction === 'outgoing' ? 'justify-end' : 'justify-start'
+                  message.direction === 'outgoing' ? 'justify-end' : 'justify-start',
+                  isFirstInGroup(index) ? 'mt-3' : 'mt-[3px]'
                 ]"
               >
               <div
                 :class="[
                   'chat-bubble',
-                  message.direction === 'outgoing' ? 'chat-bubble-outgoing' : 'chat-bubble-incoming'
+                  message.direction === 'outgoing' ? 'chat-bubble-outgoing' : 'chat-bubble-incoming',
+                  isFirstInGroup(index) && 'has-tail'
                 ]"
               >
+                <!-- Who sent it: agent name, or bot/API/campaign -->
+                <p v-if="showSenderLabel(index)" class="wa-sender">
+                  ~ {{ message.sent_by_name || $t('chat.senderAutomated', 'Bot / API') }}
+                </p>
                 <!-- Reply preview (if this message is replying to another) -->
                 <div
                   v-if="message.is_reply && message.reply_to_message"
@@ -2349,22 +2487,15 @@ async function sendMediaMessage() {
                     {{ reaction.emoji }}
                   </span>
                 </div>
-                <!-- Failed message error (not for template messages) -->
-                <span
-                  v-if="message.status === 'failed' && message.direction === 'outgoing' && message.message_type !== 'template'"
-                  class="flex items-center gap-1 mt-1 text-xs text-destructive"
-                >
-                  <AlertCircle class="h-3 w-3" />
-                  <span>{{ message.error_message || 'Failed to send' }}</span>
-                </span>
-                <!-- Failed template message indicator (no retry) -->
-                <span
-                  v-if="message.status === 'failed' && message.direction === 'outgoing' && message.message_type === 'template'"
-                  class="flex items-center gap-1 mt-1 text-xs text-destructive"
-                >
-                  <AlertCircle class="h-3 w-3" />
-                  <span>{{ message.error_message || 'Failed to send' }}</span>
-                </span>
+                <!-- Failed send: short label, actionable reason on hover -->
+                <Tooltip v-if="message.status === 'failed' && message.direction === 'outgoing'">
+                  <TooltipTrigger as-child>
+                    <span class="wa-failed">
+                      <AlertCircle class="h-3.5 w-3.5 shrink-0" />{{ $t('chat.notDelivered', 'Not delivered') }}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent class="max-w-xs">{{ friendlyError(message.error_message) }}</TooltipContent>
+                </Tooltip>
               </div>
               <!-- Action buttons for incoming messages -->
               <div v-if="message.direction === 'incoming'" class="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity self-center ml-1">
@@ -2445,22 +2576,27 @@ async function sendMediaMessage() {
         </ScrollArea>
         </div>
 
-        <!-- Service window expired banner -->
-        <div
-          v-if="isServiceWindowExpired"
-          class="px-4 py-2.5 border-t border-red-500/20 bg-red-500/10 flex items-center gap-2"
-        >
-          <Clock class="h-4 w-4 text-red-500 shrink-0" />
-          <span class="text-sm text-red-500 flex-1">{{ $t('chat.serviceWindowExpired') }}</span>
-          <Button variant="outline" size="sm" class="border-red-500/30 text-red-500 hover:bg-red-500/10 shrink-0" @click="openTemplatePicker">
-            {{ $t('chat.sendTemplateAction') }}
-          </Button>
+        <!-- 24h window closed: only templates can be sent -->
+        <div v-if="isServiceWindowExpired" class="wa-composer px-4 py-3 flex items-center gap-3">
+          <Lock class="h-5 w-5 wa-subtle shrink-0" />
+          <div class="flex-1 flex flex-col items-center gap-1.5">
+            <TemplatePicker :selected-account="selectedAccount" align="center" @select-with-params="handleTemplateWithParams">
+              <template #trigger>
+                <Button type="button" size="sm" class="wa-send h-9 px-5">
+                  <LayoutTemplate class="h-4 w-4" />{{ $t('chat.sendTemplateAction') }}
+                </Button>
+              </template>
+            </TemplatePicker>
+            <p class="text-xs wa-subtle text-center">{{ $t('chat.windowExpiredShort', '24-hour session expired. Send a template to restart the conversation.') }}</p>
+          </div>
+          <span class="w-5 shrink-0" aria-hidden="true" />
         </div>
 
+        <template v-else>
         <!-- Reply indicator -->
         <div
           v-if="contactsStore.replyingTo"
-          class="px-4 py-2 border-t border-white/[0.08] light:border-gray-200 bg-white/[0.04] light:bg-gray-50 flex items-center justify-between"
+          class="wa-composer px-4 pt-2 flex items-center justify-between"
         >
           <div class="flex-1 min-w-0">
             <p class="text-xs font-medium text-white/50 light:text-gray-500">
@@ -2476,15 +2612,15 @@ async function sendMediaMessage() {
         </div>
 
         <!-- Message Input -->
-        <div class="p-4 border-t border-white/[0.08] light:border-gray-200 bg-[#0f0f10] light:bg-white">
-          <form @submit.prevent="sendMessage" class="flex items-center gap-2 p-2 rounded-xl bg-white/[0.06] light:bg-gray-100 border border-white/[0.08] light:border-gray-200">
+        <div class="wa-composer px-4 py-[10px]">
+          <form @submit.prevent="sendMessage" class="flex items-end gap-1">
             <Tooltip>
               <TooltipTrigger as-child>
                 <span>
                   <Popover v-model:open="emojiPickerOpen">
                     <PopoverTrigger as-child>
-                      <button type="button" class="w-9 h-9 rounded-lg hover:bg-white/[0.08] light:hover:bg-gray-200 flex items-center justify-center transition-colors">
-                        <Smile class="w-[18px] h-[18px] text-white/40 light:text-gray-500" />
+                      <button type="button" class="w-10 h-10 rounded-full wa-icon-btn flex items-center justify-center transition-colors">
+                        <Smile class="w-6 h-6" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent side="top" align="start" class="w-auto p-0">
@@ -2515,7 +2651,7 @@ async function sendMediaMessage() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger as-child>
-                <span ref="templatePickerRef">
+                <span>
                   <TemplatePicker
                     :selected-account="selectedAccount"
                     @select-with-params="handleTemplateWithParams"
@@ -2526,8 +2662,8 @@ async function sendMediaMessage() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger as-child>
-                <button type="button" class="w-9 h-9 rounded-lg hover:bg-white/[0.08] light:hover:bg-gray-200 flex items-center justify-center transition-colors" @click="openFilePicker">
-                  <Paperclip class="w-[18px] h-[18px] text-white/40 light:text-gray-500" />
+                <button type="button" class="w-10 h-10 rounded-full wa-icon-btn flex items-center justify-center transition-colors" @click="openFilePicker">
+                  <Paperclip class="w-[22px] h-[22px]" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>{{ $t('chat.attachFile') }}</TooltipContent>
@@ -2542,17 +2678,18 @@ async function sendMediaMessage() {
             <textarea
               ref="messageInputRef"
               v-model="messageInput"
-              :placeholder="$t('chat.typeMessage') + '...'"
+              :placeholder="$t('chat.typeMessage', 'Type a message')"
               rows="1"
-              class="flex-1 bg-transparent text-[14px] text-white light:text-gray-900 placeholder:text-white/30 light:placeholder:text-gray-400 focus:outline-none resize-none min-h-[36px] max-h-[120px] py-2 overflow-y-auto"
+              class="wa-composer-input flex-1 text-[15px] focus:outline-none resize-none min-h-[42px] max-h-[120px] px-3 py-[10px] mx-1 overflow-y-auto"
               @keydown.enter.exact.prevent="sendMessage"
               @input="autoResizeTextarea"
             />
-            <button type="submit" class="w-9 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-500 light:bg-emerald-500 light:hover:bg-emerald-600 flex items-center justify-center transition-colors disabled:opacity-50" :disabled="!messageInput.trim() || isSending">
-              <Send class="w-4 h-4 text-white" />
+            <button type="submit" class="wa-send w-10 h-10 shrink-0 flex items-center justify-center transition-colors disabled:opacity-50" :disabled="!messageInput.trim() || isSending">
+              <Send class="w-[18px] h-[18px]" />
             </button>
           </form>
         </div>
+        </template>
       </template>
     </div>
 
@@ -2843,6 +2980,7 @@ async function sendMediaMessage() {
       v-model:index="mediaViewerIndex"
       :items="viewableMedia"
     />
+    </div>
   </div>
 </template>
 

@@ -136,6 +136,15 @@ udp_port_max = 10100          # WebRTC UDP port range end
 # secret = "your-coturn-static-auth-secret"
 # credential_ttl = 86400
 
+# Platform AI keys used by the AI template generator when a client has not
+# set up their own chatbot AI provider. The first key present is used
+# (Anthropic, then OpenAI, then Google).
+[ai]
+anthropic_key = ""
+openai_key = ""
+google_key = ""
+# template_model = ""   # optional model override
+
 # Prepaid wallet: billable WhatsApp messages are debited from the client's
 # wallet in real time using the rate card set in the Owner Panel.
 [billing]

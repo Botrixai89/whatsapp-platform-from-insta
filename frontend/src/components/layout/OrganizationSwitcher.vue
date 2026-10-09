@@ -117,17 +117,19 @@ const refreshOrgs = async () => {
 </script>
 
 <template>
-  <div v-if="shouldShowSwitcher" class="px-2 py-2 border-b">
+  <div v-if="shouldShowSwitcher" class="px-2 py-2 border-b border-white/[0.08] light:border-gray-200">
     <div v-if="!collapsed" class="space-y-1">
       <div class="flex items-center justify-between">
-        <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wide px-1">
-          Organization
+        <span class="px-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 light:text-gray-400">
+          {{ $t('nav.organization', 'Organization') }}
         </span>
         <Button
           v-if="canCreateOrg"
           variant="ghost"
           size="icon"
           class="h-5 w-5"
+          :aria-label="$t('nav.createOrganization', 'Create organization')"
+          :title="$t('nav.createOrganization', 'Create organization')"
           @click="isCreateDialogOpen = true"
         >
           <Plus class="h-3 w-3" />
@@ -139,7 +141,7 @@ const refreshOrgs = async () => {
         @update:model-value="handleOrgChange"
       >
         <SelectTrigger class="h-8 text-[13px]">
-          <SelectValue placeholder="Select organization" />
+          <SelectValue :placeholder="$t('nav.selectOrganization', 'Select organization')" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem

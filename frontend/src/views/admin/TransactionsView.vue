@@ -13,9 +13,9 @@ const currency = ref(walletStore.currency)
 
 <template>
   <div class="flex flex-col h-full bg-[#0a0a0b] light:bg-gray-50">
-    <PageHeader :title="$t('owner.transactionsTitle')" :description="$t('owner.transactionsSubtitle')" :icon="Receipt" icon-gradient="bg-gradient-to-br from-sky-500 to-blue-600 shadow-sky-500/20" />
+    <PageHeader :title="$t('owner.transactionsTitle')" :description="$t('owner.transactionsSubtitle')" :icon="Receipt" />
     <ScrollArea class="flex-1">
-      <div class="p-6 max-w-7xl mx-auto">
+      <div class="p-6">
         <Card>
           <CardHeader>
             <CardTitle>{{ $t('owner.allTransactions') }}</CardTitle>

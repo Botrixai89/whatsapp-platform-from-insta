@@ -97,7 +97,7 @@ async function submitAdd() {
       })
       created++
     }
-    toast.success(t('owner.ratesAdded', { n: created }))
+    toast.success(t('owner.ratesAdded', { n: created }, created))
     addOpen.value = false
   } catch (e) {
     toast.error(getErrorMessage(e, t('owner.rateSaveFailed')))
@@ -172,7 +172,7 @@ async function confirmDelete() {
 
 <template>
   <div class="flex flex-col h-full bg-[#0a0a0b] light:bg-gray-50">
-    <PageHeader :title="$t('owner.ratesTitle')" :description="$t('owner.ratesSubtitle')" :icon="IndianRupee" icon-gradient="bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/20">
+    <PageHeader :title="$t('owner.ratesTitle')" :description="$t('owner.ratesSubtitle')" :icon="IndianRupee">
       <template #actions>
         <Button size="sm" @click="openAdd"><Plus class="h-4 w-4 mr-2" />{{ $t('owner.addCountryRates') }}</Button>
       </template>
@@ -181,7 +181,7 @@ async function confirmDelete() {
     <ErrorState v-if="error && !isLoading" :title="$t('common.loadErrorTitle')" :description="$t('common.loadErrorDescription')" :retry-label="$t('common.retryLoad')" class="flex-1" @retry="load" />
 
     <ScrollArea v-else class="flex-1">
-      <div class="p-6 max-w-6xl mx-auto space-y-4">
+      <div class="p-6 space-y-4">
         <div class="flex gap-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-200 light:text-sky-800">
           <Info class="h-4 w-4 shrink-0 mt-0.5" />
           <div class="space-y-1">

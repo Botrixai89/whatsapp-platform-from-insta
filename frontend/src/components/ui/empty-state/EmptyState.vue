@@ -21,13 +21,13 @@ const props = defineProps<EmptyStateProps>()
   >
     <div
       v-if="props.icon || $slots.icon"
-      class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-primary/5 ring-1 ring-primary/10"
+      class="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.04] ring-1 ring-white/[0.08] light:bg-gray-100 light:ring-gray-200"
     >
       <slot name="icon">
-        <component :is="props.icon" class="h-7 w-7 text-primary/60" />
+        <component :is="props.icon" class="h-5 w-5 text-white/50 light:text-gray-500" />
       </slot>
     </div>
-    <h3 v-if="props.title || $slots.title" class="text-lg font-semibold text-foreground">
+    <h3 v-if="props.title || $slots.title" class="text-base font-semibold text-foreground">
       <slot name="title">{{ props.title }}</slot>
     </h3>
     <p

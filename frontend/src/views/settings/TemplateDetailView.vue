@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -10,6 +10,9 @@ import DetailPageLayout from '@/components/shared/DetailPageLayout.vue'
 import MetadataPanel from '@/components/shared/MetadataPanel.vue'
 import AuditLogPanel from '@/components/shared/AuditLogPanel.vue'
 import UnsavedChangesDialog from '@/components/shared/UnsavedChangesDialog.vue'
+import AITemplateGenerator from './templates/AITemplateGenerator.vue'
+import WhatsAppTemplatePreview from './templates/WhatsAppTemplatePreview.vue'
+import type { TemplateAIDraft } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,6 +49,7 @@ import {
   X,
   ChevronDown,
   Info,
+  Sparkles,
 } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/api-utils'
 import { getQualityBadgeClass, getQualityRatingLabel } from '@/lib/utils'
@@ -649,11 +653,44 @@ function getFlowScreens(flowId: string): string[] {
     .filter(Boolean)
 }
 
+// Live preview: local URL for a header image/video the user just picked
+const headerMediaPreviewUrl = ref('')
+watch(headerMediaFile, (file) => {
+  if (headerMediaPreviewUrl.value) URL.revokeObjectURL(headerMediaPreviewUrl.value)
+  headerMediaPreviewUrl.value = file ? URL.createObjectURL(file) : ''
+})
+onBeforeUnmount(() => {
+  if (headerMediaPreviewUrl.value) URL.revokeObjectURL(headerMediaPreviewUrl.value)
+})
+
+// AI template agent
+const isAIOpen = ref(false)
+
+function applyAIDraft(d: TemplateAIDraft) {
+  form.value = {
+    ...form.value,
+    name: d.name,
+    display_name: d.display_name,
+    language: d.language,
+    category: d.category,
+    header_type: d.header_type,
+    header_content: d.header_content,
+    body_content: d.body_content,
+    footer_content: d.footer_content,
+    buttons: d.buttons.map(b => ({ ...b })),
+    sample_values: d.sample_values.map(sv => ({ ...sv })),
+  }
+  if (!form.value.whatsapp_account && accounts.value.length) {
+    form.value.whatsapp_account = accounts.value[0].name
+  }
+}
+
 onMounted(async () => {
   await Promise.all([loadAccounts(), loadFlows()])
   if (isNew.value) {
     isLoading.value = false
     hasChanges.value = false
+    if (route.query.ai === '1') isAIOpen.value = true
   } else {
     await loadTemplate()
   }
@@ -665,7 +702,6 @@ onMounted(async () => {
   <DetailPageLayout
     :title="isNew ? $t('templates.newTemplate', 'New Template') : (template?.display_name || template?.name || '')"
     :icon="FileText"
-    icon-gradient="bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/20"
     back-link="/templates"
     :breadcrumbs="breadcrumbs"
     :is-loading="isLoading"
@@ -674,6 +710,9 @@ onMounted(async () => {
   >
     <template #actions>
       <div class="flex items-center gap-2">
+        <Button v-if="canWrite && isEditable && !isAuthentication" variant="outline" size="sm" class="border-emerald-500/40 text-emerald-400 light:text-emerald-700" @click="isAIOpen = true">
+          <Sparkles class="h-4 w-4 mr-1" /> {{ $t('templateAI.button') }}
+        </Button>
         <Button v-if="!isNew" variant="outline" size="sm" @click="isPreviewOpen = true">
           <Eye class="h-4 w-4 mr-1" /> {{ $t('templates.preview', 'Preview') }}
         </Button>
@@ -1161,8 +1200,26 @@ onMounted(async () => {
     />
 
     <!-- Sidebar -->
-    <template v-if="!isNew" #sidebar>
+    <template #sidebar>
+      <!-- Live preview -->
+      <Card class="lg:sticky lg:top-0">
+        <CardHeader class="pb-3">
+          <CardTitle class="text-sm font-medium flex items-center gap-2">
+            <Eye class="h-4 w-4" />{{ $t('templates.livePreview', 'Live Preview') }}
+          </CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-2">
+          <WhatsAppTemplatePreview
+            :draft="form"
+            :media-url="headerMediaPreviewUrl"
+            :placeholder="$t('templates.livePreviewEmpty', 'Start typing the body to see your message here')"
+          />
+          <p class="text-[11px] text-muted-foreground">{{ $t('templates.livePreviewHint', 'Updates as you type. Sample values replace the variables. The final look on WhatsApp may differ slightly.') }}</p>
+        </CardContent>
+      </Card>
+
       <MetadataPanel
+        v-if="!isNew"
         :created-at="template?.created_at"
         :updated-at="template?.updated_at"
         :created-by-name="template?.created_by_name"
@@ -1188,6 +1245,14 @@ onMounted(async () => {
       </Card>
     </template>
   </DetailPageLayout>
+
+  <AITemplateGenerator
+    v-model:open="isAIOpen"
+    :languages="languages"
+    :default-language="form.language"
+    :default-category="isNew ? 'AUTO' : form.category"
+    @apply="applyAIDraft"
+  />
 
   <!-- Delete Confirmation -->
   <AlertDialog v-model:open="deleteDialogOpen">

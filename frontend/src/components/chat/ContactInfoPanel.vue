@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import WaAvatar from '@/components/chat/WaAvatar.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -22,10 +22,12 @@ import {
   CommandItem,
   CommandList
 } from '@/components/ui/command'
-import { X, ChevronDown, Phone, User, Plus, Check, Tags, Loader2 } from 'lucide-vue-next'
+import { X, ChevronDown, Phone, User, Plus, Check, Tags, Loader2, MapPin, Briefcase, UserCircle } from 'lucide-vue-next'
+import { phoneCountry } from '@/lib/phoneCountry'
+import { RouterLink } from 'vue-router'
 import { TagBadge } from '@/components/ui/tag-badge'
 import MetadataSection from '@/components/chat/MetadataSection.vue'
-import { getInitials, getAvatarGradient, formatLabel } from '@/lib/utils'
+import { formatLabel } from '@/lib/utils'
 import { getTagColorClass } from '@/lib/constants'
 import { useTagsStore } from '@/stores/tags'
 import { useAuthStore } from '@/stores/auth'
@@ -67,6 +69,14 @@ const props = defineProps<{
   contact: Contact
   sessionData?: SessionData | null
 }>()
+
+const country = computed(() => phoneCountry(props.contact.phone_number))
+const detailRows = computed(() => [
+  { icon: MapPin, label: 'Location', value: country.value ? `${country.value.flag} ${country.value.name}` : '—' },
+  { icon: UserCircle, label: 'User Name', value: props.contact.profile_name || props.contact.name || '—' },
+  { icon: Phone, label: 'Phone No.', value: props.contact.phone_number },
+  { icon: Briefcase, label: 'Business No.', value: props.contact.whatsapp_account || '—' },
+])
 
 const emit = defineEmits<{
   close: []
@@ -242,7 +252,7 @@ async function updateContactTags(tags: string[]) {
 
 <template>
   <div
-    class="flex flex-col bg-card h-full relative"
+    class="flex flex-col h-full relative wa-sidebar border-l border-[var(--wa-border)]"
     :style="{ width: `${panelWidth}px` }"
   >
     <!-- Resize Handle -->
@@ -253,30 +263,37 @@ async function updateContactTags(tags: string[]) {
     />
 
     <!-- Header -->
-    <div class="h-12 px-3 border-b flex items-center justify-between">
-      <h3 class="font-medium text-sm">Contact Info</h3>
-      <Button variant="ghost" size="icon" class="h-8 w-8" @click="emit('close')">
-        <X class="h-4 w-4" />
+    <div class="wa-panel-header h-[59px] px-4 flex items-center gap-4 shrink-0">
+      <Button variant="ghost" size="icon" class="h-9 w-9 rounded-full wa-icon-btn" @click="emit('close')">
+        <X class="h-5 w-5" />
       </Button>
+      <h3 class="text-base wa-title">Contact info</h3>
     </div>
 
     <ScrollArea class="flex-1">
       <div class="p-4 space-y-4">
         <!-- Contact Header -->
-        <div class="flex flex-col items-center text-center pb-4 border-b">
-          <Avatar class="h-16 w-16 mb-3">
-            <AvatarImage :src="contact.avatar_url" />
-            <AvatarFallback :class="'text-lg bg-gradient-to-br text-white ' + getAvatarGradient(contact.name || contact.phone_number)">
-              {{ getInitials(contact.name || contact.phone_number) }}
-            </AvatarFallback>
-          </Avatar>
-          <h4 class="font-medium">
-            {{ contact.name || contact.phone_number }}
-          </h4>
-          <div class="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-            <Phone class="h-3 w-3" />
-            <span>{{ contact.phone_number }}</span>
+        <div class="flex flex-col items-center text-center pt-2 pb-4 border-b border-[var(--wa-border)]">
+          <WaAvatar :src="contact.avatar_url" class="h-24 w-24 mb-3" />
+          <h4 class="text-xl wa-title">{{ contact.name || contact.phone_number }}</h4>
+          <p class="text-sm wa-subtle mt-0.5">{{ contact.phone_number }}</p>
+        </div>
+
+        <!-- Details -->
+        <div class="pb-4 border-b border-[var(--wa-border)]">
+          <div class="flex items-center justify-between mb-3">
+            <h5 class="text-sm font-medium wa-title">Details</h5>
+            <RouterLink :to="`/settings/contacts/${contact.id}`">
+              <Button variant="outline" size="sm" class="h-7 px-3">Edit</Button>
+            </RouterLink>
           </div>
+          <dl class="space-y-3">
+            <div v-for="row in detailRows" :key="row.label" class="flex items-center gap-3 text-sm">
+              <component :is="row.icon" class="h-4 w-4 wa-subtle shrink-0" />
+              <dt class="wa-subtle w-24 shrink-0">{{ row.label }}</dt>
+              <dd class="flex-1 text-right truncate wa-title" :title="row.value">{{ row.value }}</dd>
+            </div>
+          </dl>
         </div>
 
         <!-- Tags Section (always shown) -->

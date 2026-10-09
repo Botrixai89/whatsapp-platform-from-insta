@@ -129,7 +129,7 @@ const statCards = computed(() => [
       :title="$t('chatbot.title')"
       :description="$t('chatbot.subtitle')"
       :icon="Bot"
-      icon-gradient="bg-gradient-to-br from-purple-500 to-pink-600 shadow-purple-500/20"
+     
     >
       <template #actions>
         <div class="flex items-center gap-3">
@@ -192,27 +192,15 @@ const statCards = computed(() => [
           </template>
           <!-- Actual Stats -->
           <template v-else>
-            <div v-for="card in statCards" :key="card.key" class="card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 light:bg-white light:border-gray-200">
+            <div v-for="card in statCards" :key="card.key" class="card-depth rounded-xl border border-white/[0.08] bg-white/[0.02] p-6 light:bg-white light:border-gray-200">
               <div class="flex flex-row items-center justify-between space-y-0 pb-2">
                 <span class="text-sm font-medium text-white/50 light:text-gray-500">{{ card.title }}</span>
-                <div :class="[
-                  'h-10 w-10 rounded-lg flex items-center justify-center',
-                  card.key === 'total_sessions' ? 'bg-blue-500/20' : '',
-                  card.key === 'active_sessions' ? 'bg-emerald-500/20' : '',
-                  card.key === 'messages_handled' ? 'bg-purple-500/20' : '',
-                  card.key === 'ai_responses' ? 'bg-orange-500/20' : ''
-                ]">
-                  <component :is="card.icon" :class="[
-                    'h-5 w-5',
-                    card.key === 'total_sessions' ? 'text-blue-400' : '',
-                    card.key === 'active_sessions' ? 'text-emerald-400' : '',
-                    card.key === 'messages_handled' ? 'text-purple-400' : '',
-                    card.key === 'ai_responses' ? 'text-orange-400' : ''
-                  ]" />
+                <div class="h-9 w-9 rounded-lg bg-white/[0.06] light:bg-gray-100 flex items-center justify-center">
+                  <component :is="card.icon" class="h-4 w-4 text-white/60 light:text-gray-500" />
                 </div>
               </div>
               <div class="pt-2">
-                <div class="text-3xl font-bold text-white light:text-gray-900">
+                <div class="text-2xl font-semibold tracking-tight tabular-nums text-white light:text-gray-900">
                   {{ stats[card.key as keyof Stats].toLocaleString() }}
                 </div>
               </div>
@@ -225,11 +213,11 @@ const statCards = computed(() => [
           <RouterLink to="/chatbot/keywords" class="card-interactive rounded-xl border border-white/[0.08] bg-white/[0.02] h-full light:bg-white light:border-gray-200">
             <div class="p-6">
               <div class="flex items-center gap-3">
-                <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                  <Key class="h-5 w-5 text-white" />
+                <div class="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center bg-white/[0.06] text-white/70 light:bg-gray-100 light:text-gray-600">
+                  <Key class="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 class="text-lg font-semibold text-white light:text-gray-900">{{ $t('chatbot.keywordRules') }}</h3>
+                  <h3 class="text-base font-semibold text-white light:text-gray-900">{{ $t('chatbot.keywordRules') }}</h3>
                   <p class="text-sm text-white/40 light:text-gray-500">{{ $t('chatbot.rulesConfigured', { count: stats.keywords_count }) }}</p>
                 </div>
               </div>
@@ -244,11 +232,11 @@ const statCards = computed(() => [
           <RouterLink to="/chatbot/flows" class="card-interactive rounded-xl border border-white/[0.08] bg-white/[0.02] h-full light:bg-white light:border-gray-200">
             <div class="p-6">
               <div class="flex items-center gap-3">
-                <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                  <Workflow class="h-5 w-5 text-white" />
+                <div class="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center bg-white/[0.06] text-white/70 light:bg-gray-100 light:text-gray-600">
+                  <Workflow class="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 class="text-lg font-semibold text-white light:text-gray-900">{{ $t('chatbot.conversationFlows') }}</h3>
+                  <h3 class="text-base font-semibold text-white light:text-gray-900">{{ $t('chatbot.conversationFlows') }}</h3>
                   <p class="text-sm text-white/40 light:text-gray-500">{{ $t('chatbot.flowsCreated', { count: stats.flows_count }) }}</p>
                 </div>
               </div>
@@ -263,11 +251,11 @@ const statCards = computed(() => [
           <RouterLink to="/chatbot/ai" class="card-interactive rounded-xl border border-white/[0.08] bg-white/[0.02] h-full light:bg-white light:border-gray-200">
             <div class="p-6">
               <div class="flex items-center gap-3">
-                <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                  <Sparkles class="h-5 w-5 text-white" />
+                <div class="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center bg-white/[0.06] text-white/70 light:bg-gray-100 light:text-gray-600">
+                  <Sparkles class="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 class="text-lg font-semibold text-white light:text-gray-900">{{ $t('chatbot.aiContexts') }}</h3>
+                  <h3 class="text-base font-semibold text-white light:text-gray-900">{{ $t('chatbot.aiContexts') }}</h3>
                   <p class="text-sm text-white/40 light:text-gray-500">{{ $t('chatbot.contextsActive', { count: stats.ai_contexts_count }) }}</p>
                 </div>
               </div>
@@ -285,7 +273,7 @@ const statCards = computed(() => [
           <div class="p-6">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-lg font-semibold text-white light:text-gray-900">{{ $t('chatbot.currentConfiguration') }}</h3>
+                <h3 class="text-base font-semibold text-white light:text-gray-900">{{ $t('chatbot.currentConfiguration') }}</h3>
                 <p class="text-sm text-white/40 light:text-gray-500">{{ $t('chatbot.configOverview') }}</p>
               </div>
               <RouterLink to="/settings/chatbot">

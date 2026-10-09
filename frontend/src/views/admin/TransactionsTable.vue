@@ -85,7 +85,7 @@ onMounted(load)
 defineExpose({ reload })
 
 const sourceVariant = (s: string) => ({
-  recharge: 'success', bonus: 'info', manual: 'secondary', message: 'outline', refund: 'warning', adjustment: 'secondary',
+  recharge: 'success', bonus: 'info', manual: 'secondary', message: 'secondary', refund: 'warning', adjustment: 'secondary',
 } as Record<string, any>)[s] || 'secondary'
 </script>
 

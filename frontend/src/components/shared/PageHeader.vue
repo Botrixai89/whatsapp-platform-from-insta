@@ -15,7 +15,6 @@ defineProps<{
   title: string
   description?: string
   icon?: Component
-  iconGradient?: string
   backLink?: string
   breadcrumbs?: Array<{ label: string; href?: string }>
 }>()
@@ -23,21 +22,20 @@ defineProps<{
 
 <template>
   <header class="border-b border-white/[0.08] light:border-gray-200 bg-[#0a0a0b]/95 light:bg-white/95 backdrop-blur">
-    <div class="flex h-16 items-center px-6">
-      <RouterLink v-if="backLink" :to="backLink">
-        <Button variant="ghost" size="icon" class="mr-3">
-          <ArrowLeft class="h-5 w-5" />
+    <div class="flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 md:flex-nowrap md:px-6">
+      <RouterLink v-if="backLink" :to="backLink" class="-mr-1 shrink-0" :aria-label="$t('common.back')">
+        <Button variant="ghost" size="icon-sm">
+          <ArrowLeft class="h-4 w-4" />
         </Button>
       </RouterLink>
       <div
         v-if="icon"
-        class="h-8 w-8 rounded-lg flex items-center justify-center mr-3 shadow-lg"
-        :class="iconGradient || 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/20'"
+        class="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center border border-white/[0.08] bg-white/[0.04] light:border-gray-200 light:bg-gray-50"
       >
-        <component :is="icon" class="h-4 w-4 text-white" />
+        <component :is="icon" class="h-4 w-4 text-white/70 light:text-gray-600" />
       </div>
-      <div class="flex-1">
-        <h1 class="text-xl font-semibold text-white light:text-gray-900">{{ title }}</h1>
+      <div class="flex-1 min-w-[10rem]">
+        <h1 class="text-lg font-semibold leading-tight truncate text-white light:text-gray-900">{{ title }}</h1>
         <template v-if="breadcrumbs?.length">
           <Breadcrumb>
             <BreadcrumbList>
@@ -53,11 +51,13 @@ defineProps<{
             </BreadcrumbList>
           </Breadcrumb>
         </template>
-        <p v-else-if="description" class="text-sm text-white/50 light:text-gray-500">
+        <p v-else-if="description" class="text-sm text-white/50 light:text-gray-500 truncate">
           {{ description }}
         </p>
       </div>
-      <slot name="actions" />
+      <div v-if="$slots.actions" class="flex w-full flex-wrap items-center gap-2 md:w-auto md:shrink-0 md:flex-nowrap">
+        <slot name="actions" />
+      </div>
     </div>
   </header>
 </template>

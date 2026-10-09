@@ -66,13 +66,13 @@ const handleRegister = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 light:from-violet-50 light:to-violet-100 p-4">
+  <div class="min-h-screen flex items-center justify-center bg-[#0a0a0b] light:bg-gray-50 p-4">
     <Card class="w-full max-w-md">
       <CardHeader class="space-y-1 text-center">
         <div class="flex justify-center mb-4">
           <BrandLogo mark-class="h-10 w-10" text-class="text-3xl font-semibold" />
         </div>
-        <CardTitle class="text-2xl font-bold">{{ $t('auth.createAccount') }}</CardTitle>
+        <CardTitle class="text-xl font-semibold">{{ $t('auth.createAccount') }}</CardTitle>
         <CardDescription>
           {{ $t('auth.createAccountDesc') }}
         </CardDescription>

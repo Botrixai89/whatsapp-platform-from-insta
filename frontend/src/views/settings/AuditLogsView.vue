@@ -120,7 +120,6 @@ onMounted(async () => {
       :title="t('auditLogs.title')"
       :description="t('auditLogs.description')"
       :icon="ScrollText"
-      icon-gradient="bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/20"
     />
 
     <ScrollArea class="flex-1">

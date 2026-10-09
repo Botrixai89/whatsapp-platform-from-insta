@@ -8,10 +8,12 @@ import {
 } from 'reka-ui'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<{
+// Vertical by default: an enabled horizontal bar makes the content fit-content wide,
+// so wide tables would stretch the whole page instead of scrolling inside their card.
+const props = withDefaults(defineProps<{
   class?: string
   orientation?: 'vertical' | 'horizontal' | 'both'
-}>()
+}>(), { orientation: 'vertical' })
 </script>
 
 <template>

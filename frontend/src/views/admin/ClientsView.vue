@@ -151,7 +151,7 @@ function relative(date: string | null) {
 
 <template>
   <div class="flex flex-col h-full bg-[#0a0a0b] light:bg-gray-50">
-    <PageHeader :title="$t('owner.clientsTitle')" :description="$t('owner.clientsSubtitle')" :icon="Building2" icon-gradient="bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/20">
+    <PageHeader :title="$t('owner.clientsTitle')" :description="$t('owner.clientsSubtitle')" :icon="Building2">
       <template #actions>
         <Button size="sm" @click="openCreate"><Plus class="h-4 w-4 mr-2" />{{ $t('owner.addClient') }}</Button>
       </template>
@@ -161,13 +161,13 @@ function relative(date: string | null) {
 
     <ScrollArea v-else class="flex-1">
       <div class="p-6">
-        <div class="max-w-7xl mx-auto">
+        <div class="w-full">
           <Card>
             <CardHeader>
               <div class="flex items-center justify-between flex-wrap gap-4">
                 <div>
                   <CardTitle>{{ $t('owner.allClients') }}</CardTitle>
-                  <CardDescription>{{ $t('owner.allClientsDesc', { n: totalItems }) }}</CardDescription>
+                  <CardDescription>{{ $t('owner.allClientsDesc', { n: totalItems }, totalItems) }}</CardDescription>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                   <Select v-model="statusFilter" @update:model-value="resetAndFetch">
@@ -211,7 +211,7 @@ function relative(date: string | null) {
                 <template #cell-name="{ item }">
                   <RouterLink :to="`/admin/clients/${item.id}`" class="block min-w-0 hover:underline">
                     <div class="font-medium text-white light:text-gray-900 truncate">{{ item.name }}</div>
-                    <div class="text-xs text-muted-foreground truncate">{{ item.owner_email || item.contact_phone || '—' }}</div>
+                    <div v-if="item.owner_email || item.contact_phone" class="text-xs text-muted-foreground truncate">{{ item.owner_email || item.contact_phone }}</div>
                   </RouterLink>
                 </template>
                 <template #cell-plan_name="{ item }">
@@ -237,8 +237,8 @@ function relative(date: string | null) {
                 </template>
                 <template #cell-actions="{ item }">
                   <div class="flex items-center justify-end gap-1">
-                    <IconButton :icon="PlusCircle" :label="$t('owner.addFunds')" class="h-8 w-8 text-emerald-400" @click="openWallet(item, 'credit')" />
-                    <IconButton :icon="MinusCircle" :label="$t('owner.deduct')" class="h-8 w-8 text-red-400" @click="openWallet(item, 'debit')" />
+                    <IconButton :icon="PlusCircle" :label="$t('owner.addFunds')" class="h-8 w-8 text-muted-foreground hover:text-emerald-400" @click="openWallet(item, 'credit')" />
+                    <IconButton :icon="MinusCircle" :label="$t('owner.deduct')" class="h-8 w-8 text-muted-foreground hover:text-red-400" @click="openWallet(item, 'debit')" />
                     <IconButton :icon="Eye" :label="$t('owner.viewDetails')" class="h-8 w-8" @click="router.push(`/admin/clients/${item.id}`)" />
                     <IconButton :icon="LogIn" :label="$t('owner.openAsClient')" class="h-8 w-8" @click="openAsClient(item.id)" />
                   </div>

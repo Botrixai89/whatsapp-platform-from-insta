@@ -12,9 +12,10 @@ import {
 import { templatesService } from '@/services/api'
 import { LayoutTemplate, Search, Loader2 } from 'lucide-vue-next'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   selectedAccount?: string | null
-}>()
+  align?: 'start' | 'center' | 'end'
+}>(), { align: 'start' })
 
 const emit = defineEmits<{
   (e: 'select-with-params', template: any, paramNames: string[]): void
@@ -112,11 +113,13 @@ function selectTemplate(tpl: any) {
 <template>
   <Popover v-model:open="isOpen">
     <PopoverTrigger as-child>
-      <Button type="button" variant="ghost" size="icon">
-        <LayoutTemplate class="h-5 w-5" />
-      </Button>
+      <slot name="trigger">
+        <Button type="button" variant="ghost" size="icon">
+          <LayoutTemplate class="h-5 w-5" />
+        </Button>
+      </slot>
     </PopoverTrigger>
-    <PopoverContent side="top" align="start" class="w-80 p-0">
+    <PopoverContent side="top" :align="align" class="w-80 p-0">
       <div class="p-3 border-b">
         <div class="relative">
           <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

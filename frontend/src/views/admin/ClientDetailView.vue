@@ -21,9 +21,9 @@ import { useOpenAsClient } from '@/composables/useOpenAsClient'
 import { formatMoney } from '@/stores/wallet'
 import { formatDate } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api-utils'
-import { Line } from '@/lib/charts'
+import { Line, shortDayLabel } from '@/lib/charts'
 import { toast } from 'vue-sonner'
-import { Building2, Wallet, Plus, Minus, Ban, CheckCircle2, LogIn, Save, Users, Phone, Loader2 } from 'lucide-vue-next'
+import { Building2, Plus, Minus, Ban, CheckCircle2, LogIn, Save, Users, Phone, Loader2 } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -155,11 +155,11 @@ const usageRows = computed(() => {
 const usageChart = computed(() => {
   const daily = detail.value?.daily || []
   return {
-    labels: daily.map(d => d.date.slice(5)),
+    labels: daily.map(d => shortDayLabel(d.date)),
     datasets: [
-      { label: t('owner.sent'), data: daily.map(d => d.outgoing), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.3, yAxisID: 'y' },
-      { label: t('owner.received'), data: daily.map(d => d.incoming), borderColor: '#6366f1', tension: 0.3, yAxisID: 'y' },
-      { label: t('owner.spend'), data: daily.map(d => d.spend), borderColor: '#f59e0b', borderDash: [4, 4], tension: 0.3, yAxisID: 'y1' },
+      { label: t('owner.sent'), data: daily.map(d => d.outgoing), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.35, yAxisID: 'y' },
+      { label: t('owner.received'), data: daily.map(d => d.incoming), borderColor: '#8a8f98', borderDash: [4, 4], tension: 0.35, yAxisID: 'y' },
+      { label: t('owner.spend'), data: daily.map(d => d.spend), borderColor: '#f59e0b', tension: 0.35, yAxisID: 'y1' },
     ]
   }
 })
@@ -168,8 +168,9 @@ const usageChartOptions = {
   maintainAspectRatio: false,
   plugins: { legend: { display: true, position: 'top' as const } },
   scales: {
-    y: { beginAtZero: true, position: 'left' as const },
-    y1: { beginAtZero: true, position: 'right' as const, grid: { drawOnChartArea: false } },
+    x: { grid: { display: false } },
+    y: { beginAtZero: true, position: 'left' as const, ticks: { precision: 0 } },
+    y1: { beginAtZero: true, position: 'right' as const, grid: { drawOnChartArea: false }, ticks: { callback: (v: string | number) => money(Number(v)) } },
   }
 }
 
@@ -193,7 +194,6 @@ const numberColumns = computed<Column<any>[]>(() => [
       :title="detail?.client.name || $t('owner.client')"
       :description="detail?.client.owner_email"
       :icon="Building2"
-      icon-gradient="bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/20"
       back-link="/admin/clients"
     >
       <template #actions>
@@ -210,7 +210,7 @@ const numberColumns = computed<Column<any>[]>(() => [
     <ErrorState v-if="error && !isLoading" :title="$t('common.loadErrorTitle')" :description="$t('common.loadErrorDescription')" :retry-label="$t('common.retryLoad')" class="flex-1" @retry="load" />
 
     <ScrollArea v-else class="flex-1">
-      <div class="p-6 max-w-7xl mx-auto space-y-6">
+      <div class="p-6 space-y-6">
         <template v-if="isLoading && !detail">
           <div class="grid gap-4 lg:grid-cols-3"><Skeleton v-for="i in 3" :key="i" class="h-48 rounded-xl" /></div>
           <Skeleton class="h-72 rounded-xl" />
@@ -226,7 +226,7 @@ const numberColumns = computed<Column<any>[]>(() => [
             <!-- Wallet -->
             <Card>
               <CardHeader class="pb-2">
-                <CardTitle class="text-base flex items-center gap-2"><Wallet class="h-4 w-4" />{{ $t('owner.wallet') }}</CardTitle>
+                <CardTitle class="text-base">{{ $t('owner.wallet') }}</CardTitle>
               </CardHeader>
               <CardContent class="space-y-4">
                 <div>
@@ -288,7 +288,7 @@ const numberColumns = computed<Column<any>[]>(() => [
                 <p v-if="!detail.spend_by_category?.length" class="text-sm text-muted-foreground">{{ $t('owner.noSpendYet') }}</p>
                 <ul v-else class="space-y-2">
                   <li v-for="c in detail.spend_by_category" :key="c.category" class="flex justify-between text-sm">
-                    <span>{{ c.category }} <span class="text-muted-foreground">× {{ c.count.toLocaleString() }}</span></span>
+                    <span class="capitalize">{{ c.category.toLowerCase() }} <span class="text-muted-foreground">× {{ c.count.toLocaleString() }}</span></span>
                     <span class="tabular-nums">{{ money(c.amount) }}</span>
                   </li>
                 </ul>

@@ -256,7 +256,6 @@ async function confirmDelete() {
     <PageHeader
       :title="$t('accounts.title')"
       :icon="Phone"
-      icon-gradient="bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20"
       back-link="/settings"
       :breadcrumbs="breadcrumbs"
     >
@@ -410,7 +409,7 @@ async function confirmDelete() {
     <Dialog v-model:open="showOnboardingDialog">
       <DialogContent class="sm:max-w-2xl bg-[#0e0e11] border-[#222227] text-white light:bg-white light:border-gray-200 light:text-gray-900 p-6 shadow-2xl rounded-xl">
         <DialogHeader class="mb-4">
-          <DialogTitle class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-green-400 light:from-emerald-600 light:to-green-600 bg-clip-text text-transparent flex items-center gap-2">
+          <DialogTitle class="text-lg font-semibold flex items-center gap-2">
             {{ $t('accounts.connectTitle') }}
           </DialogTitle>
           <DialogDescription class="text-gray-400 light:text-gray-500 mt-1">

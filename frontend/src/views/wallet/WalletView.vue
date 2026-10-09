@@ -66,14 +66,14 @@ const rateColumns = computed<Column<MessageRate>[]>(() => [
 
 <template>
   <div class="flex flex-col h-full bg-[#0a0a0b] light:bg-gray-50">
-    <PageHeader :title="$t('wallet.title')" :description="$t('wallet.subtitle')" :icon="Wallet" icon-gradient="bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20">
+    <PageHeader :title="$t('wallet.title')" :description="$t('wallet.subtitle')" :icon="Wallet">
       <template #actions>
         <Button variant="outline" size="sm" @click="refresh"><RefreshCw class="h-4 w-4 mr-2" />{{ $t('common.refresh') }}</Button>
       </template>
     </PageHeader>
 
     <ScrollArea class="flex-1">
-      <div class="p-6 max-w-6xl mx-auto space-y-6">
+      <div class="p-6 space-y-6">
         <div v-if="summary?.status === 'suspended'" class="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 light:text-red-700">
           <Ban class="h-4 w-4 shrink-0" />{{ $t('wallet.suspendedBanner') }}<template v-if="summary.suspended_reason"> — {{ summary.suspended_reason }}</template>
         </div>

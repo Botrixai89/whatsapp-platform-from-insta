@@ -109,6 +109,12 @@ const router = createRouter({
           meta: { permission: 'templates' }
         },
         {
+          path: 'templates/analytics',
+          name: 'template-analytics',
+          component: () => import('@/views/settings/TemplateAnalyticsView.vue'),
+          meta: { permission: 'templates' }
+        },
+        {
           path: 'templates/:id',
           name: 'template-detail',
           component: () => import('@/views/settings/TemplateDetailView.vue'),

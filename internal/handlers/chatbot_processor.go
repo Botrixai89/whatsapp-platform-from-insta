@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Botrixai89/botrixai/internal/contactutil"
 	"github.com/Botrixai89/botrixai/internal/models"
@@ -201,6 +202,12 @@ func (a *App) processIncomingMessageFull(phoneNumberID string, msg IncomingTextM
 		a.Log.Info("Contact has active agent transfer, skipping chatbot processing",
 			"contact_id", contact.ID,
 			"phone_number", contact.PhoneNumber)
+		return
+	}
+
+	// Bot turned off for this contact from the inbox
+	if contact.BotPaused {
+		a.Log.Info("Chatbot paused for contact, skipping chatbot processing", "contact_id", contact.ID)
 		return
 	}
 
@@ -1593,8 +1600,8 @@ func (a *App) saveIncomingMessage(account *models.WhatsAppAccount, contact *mode
 
 	// Update contact's last message info
 	preview := content
-	if len(preview) > 100 {
-		preview = preview[:97] + "..."
+	if utf8.RuneCountInString(preview) > 100 {
+		preview = truncateRunes(preview, 97) + "..."
 	}
 	if msgType != "text" && msgType != "button_reply" && msgType != "nfm_reply" {
 		preview = "[" + msgType + "]"
@@ -1606,6 +1613,7 @@ func (a *App) saveIncomingMessage(account *models.WhatsAppAccount, contact *mode
 		"is_read":              false,
 		"whats_app_account":    account.Name,
 		"last_inbound_at":      now,
+		"conversation_status":  "open", // a new customer message reopens a closed chat
 	})
 
 	a.Log.Info("Saved incoming message", "message_id", message.ID, "contact_id", contact.ID, "media_url", message.MediaURL)

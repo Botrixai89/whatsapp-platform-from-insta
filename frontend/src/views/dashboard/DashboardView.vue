@@ -318,18 +318,8 @@ const formatTime = (dateStr: string): string => {
   return t('dashboard.daysAgo', { count: diffDays })
 }
 
-const getWidgetColor = (color: string) => {
-  const gradientMap: Record<string, string> = {
-    blue: 'bg-gradient-to-r from-blue-500/60 to-blue-500/0',
-    green: 'bg-gradient-to-r from-emerald-500/60 to-emerald-500/0',
-    purple: 'bg-gradient-to-r from-violet-500/60 to-violet-500/0',
-    orange: 'bg-gradient-to-r from-amber-500/60 to-amber-500/0',
-    red: 'bg-gradient-to-r from-rose-500/60 to-rose-500/0',
-    cyan: 'bg-gradient-to-r from-cyan-500/60 to-cyan-500/0'
-  }
-  const colorConfig = colorOptions.value.find(c => c.value === color) || colorOptions.value[0]
-  return { ...colorConfig, gradient: gradientMap[colorConfig.value] || gradientMap.blue }
-}
+const getWidgetColor = (color: string) =>
+  colorOptions.value.find(c => c.value === color) || colorOptions.value[0]
 
 const getWidgetIcon = (dataSource: string) => {
   switch (dataSource) {
@@ -706,11 +696,11 @@ onMounted(() => {
     <!-- Header -->
     <header class="border-b border-white/[0.08] light:border-gray-200 bg-[#0a0a0b]/95 light:bg-white/95 backdrop-blur">
       <div class="flex h-16 items-center px-6">
-        <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mr-3 shadow-lg shadow-emerald-500/20">
-          <LayoutDashboard class="h-4 w-4 text-white" />
+        <div class="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center mr-3 border border-white/[0.08] bg-white/[0.04] light:border-gray-200 light:bg-gray-50">
+          <LayoutDashboard class="h-4 w-4 text-white/70 light:text-gray-600" />
         </div>
-        <div class="flex-1">
-          <h1 class="text-xl font-semibold text-white light:text-gray-900">{{ $t('dashboard.title') }}</h1>
+        <div class="flex-1 min-w-0">
+          <h1 class="text-lg font-semibold leading-tight text-white light:text-gray-900">{{ $t('dashboard.title') }}</h1>
           <p class="text-sm text-white/50 light:text-gray-500">{{ $t('dashboard.subtitle') }}</p>
         </div>
 
@@ -792,11 +782,8 @@ onMounted(() => {
             <!-- Number widget card -->
             <div
               v-if="getWidgetById(item.i) && isNumberWidget(getWidgetById(item.i)!)"
-              class="group relative h-full card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 light:bg-white light:border-gray-200 hover:bg-white/[0.06] light:hover:bg-gray-50 transition-colors overflow-hidden"
+              class="group relative h-full card-depth rounded-xl border border-white/[0.08] bg-white/[0.02] p-6 light:bg-white light:border-gray-200 overflow-hidden"
             >
-              <!-- Gradient accent bar -->
-              <div :class="['absolute top-0 inset-x-0 h-0.5', getWidgetColor(getWidgetById(item.i)!.color).gradient]" />
-
               <!-- Drag handle indicator -->
               <div v-if="isDragMode" class="widget-drag-handle absolute top-2 left-2 text-white/20 light:text-gray-300 cursor-grab active:cursor-grabbing z-10">
                 <GripVertical class="h-4 w-4" />
@@ -869,7 +856,7 @@ onMounted(() => {
             <!-- Chart widget card -->
             <div
               v-else-if="getWidgetById(item.i) && isChartWidget(getWidgetById(item.i)!)"
-              class="group relative h-full flex flex-col card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 light:bg-white light:border-gray-200 hover:bg-white/[0.06] light:hover:bg-gray-50 transition-colors overflow-hidden"
+              class="group relative h-full flex flex-col card-depth rounded-xl border border-white/[0.08] bg-white/[0.02] p-6 light:bg-white light:border-gray-200 overflow-hidden"
             >
               <!-- Drag handle indicator -->
               <div v-if="isDragMode" class="widget-drag-handle absolute top-2 left-2 text-white/20 light:text-gray-300 cursor-grab active:cursor-grabbing z-10">
@@ -929,7 +916,7 @@ onMounted(() => {
             <!-- Table widget card -->
             <div
               v-else-if="getWidgetById(item.i) && isTableWidget(getWidgetById(item.i)!)"
-              class="group relative h-full flex flex-col card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] light:bg-white light:border-gray-200 hover:bg-white/[0.06] light:hover:bg-gray-50 transition-colors overflow-hidden"
+              class="group relative h-full flex flex-col card-depth rounded-xl border border-white/[0.08] bg-white/[0.02] light:bg-white light:border-gray-200 overflow-hidden"
             >
               <!-- Drag handle -->
               <div v-if="isDragMode" class="widget-drag-handle absolute top-2 left-2 text-white/20 light:text-gray-300 cursor-grab active:cursor-grabbing z-10">
@@ -985,7 +972,7 @@ onMounted(() => {
                       <div
                         :class="[
                           'h-10 w-10 rounded-lg flex items-center justify-center text-sm font-medium shrink-0',
-                          row.direction === 'incoming' ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white' : 'bg-gradient-to-br from-blue-500 to-cyan-600 text-white'
+                          row.direction === 'incoming' ? 'bg-emerald-500/15 text-emerald-400 light:bg-emerald-50 light:text-emerald-700' : 'bg-white/[0.06] text-white/70 light:bg-gray-100 light:text-gray-600'
                         ]"
                       >
                         {{ row.label.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() }}
@@ -1037,7 +1024,7 @@ onMounted(() => {
             <!-- Shortcuts widget card -->
             <div
               v-else-if="getWidgetById(item.i) && isShortcutsWidget(getWidgetById(item.i)!)"
-              class="group relative h-full flex flex-col card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] light:bg-white light:border-gray-200 hover:bg-white/[0.06] light:hover:bg-gray-50 transition-colors overflow-hidden"
+              class="group relative h-full flex flex-col card-depth rounded-xl border border-white/[0.08] bg-white/[0.02] light:bg-white light:border-gray-200 overflow-hidden"
             >
               <!-- Drag handle -->
               <div v-if="isDragMode" class="widget-drag-handle absolute top-2 left-2 text-white/20 light:text-gray-300 cursor-grab active:cursor-grabbing z-10">
@@ -1067,10 +1054,10 @@ onMounted(() => {
                     <RouterLink
                       v-if="SHORTCUT_REGISTRY[key as keyof typeof SHORTCUT_REGISTRY]"
                       :to="SHORTCUT_REGISTRY[key as keyof typeof SHORTCUT_REGISTRY].to"
-                      class="card-interactive flex flex-col items-center justify-center p-4 rounded-xl border border-white/[0.08] bg-white/[0.02] light:bg-gray-50 light:border-gray-200"
+                      class="group flex flex-col items-center justify-center gap-2.5 p-4 rounded-lg border border-white/[0.08] bg-white/[0.02] transition-colors hover:bg-white/[0.05] hover:border-white/[0.14] light:bg-white light:border-gray-200 light:hover:bg-gray-50 light:hover:border-gray-300"
                     >
-                      <div :class="['h-12 w-12 rounded-lg bg-gradient-to-br flex items-center justify-center mb-2 shadow-lg', SHORTCUT_REGISTRY[key as keyof typeof SHORTCUT_REGISTRY].gradient, 'shadow-' + (key as string) + '-500/20']">
-                        <component :is="SHORTCUT_REGISTRY[key as keyof typeof SHORTCUT_REGISTRY].icon" class="h-6 w-6 text-white" />
+                      <div class="h-10 w-10 rounded-lg flex items-center justify-center bg-white/[0.06] text-white/70 transition-colors group-hover:text-emerald-400 light:bg-gray-100 light:text-gray-600 light:group-hover:text-emerald-600">
+                        <component :is="SHORTCUT_REGISTRY[key as keyof typeof SHORTCUT_REGISTRY].icon" class="h-5 w-5" />
                       </div>
                       <span class="text-sm font-medium text-white light:text-gray-900">{{ SHORTCUT_REGISTRY[key as keyof typeof SHORTCUT_REGISTRY].label }}</span>
                     </RouterLink>
@@ -1229,8 +1216,8 @@ onMounted(() => {
                   class="rounded border-white/20 bg-white/[0.04] text-emerald-500 focus:ring-emerald-500 light:border-gray-300 light:bg-white"
                 />
                 <div class="flex items-center gap-2">
-                  <div :class="['h-8 w-8 rounded-lg bg-gradient-to-br flex items-center justify-center', shortcut.gradient]">
-                    <component :is="shortcut.icon" class="h-4 w-4 text-white" />
+                  <div class="h-8 w-8 rounded-lg flex items-center justify-center bg-white/[0.06] text-white/70 light:bg-gray-100 light:text-gray-600">
+                    <component :is="shortcut.icon" class="h-4 w-4" />
                   </div>
                   <span class="text-sm text-white/70 light:text-gray-700">{{ shortcut.label }}</span>
                 </div>

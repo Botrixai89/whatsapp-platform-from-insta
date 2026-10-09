@@ -134,6 +134,7 @@ func runMigrations(db *gorm.DB) error {
 		&models.WalletTransaction{},
 		&models.MessageCharge{},
 		&models.MessageRate{},
+		&models.TemplateAIPrompt{},
 	)
 }
 

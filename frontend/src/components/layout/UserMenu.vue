@@ -176,7 +176,7 @@ const handleLogout = () => {
         >
           <Avatar class="h-7 w-7 ring-2 ring-white/[0.1] light:ring-gray-200">
             <AvatarImage :src="undefined" />
-            <AvatarFallback class="text-xs bg-gradient-to-br from-emerald-500 to-green-600 text-white">
+            <AvatarFallback class="text-xs bg-emerald-600 text-white">
               {{ getInitials(authStore.user?.full_name || 'U') }}
             </AvatarFallback>
           </Avatar>
