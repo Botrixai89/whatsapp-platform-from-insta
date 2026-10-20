@@ -22,7 +22,7 @@ import {
   CommandItem,
   CommandList
 } from '@/components/ui/command'
-import { X, ChevronDown, Phone, User, Plus, Check, Tags, Loader2, MapPin, Briefcase, UserCircle } from 'lucide-vue-next'
+import { X, ChevronDown, Phone, User, Plus, Check, Tags, Loader2, MapPin, Briefcase, UserCircle, Megaphone } from 'lucide-vue-next'
 import { phoneCountry } from '@/lib/phoneCountry'
 import { RouterLink } from 'vue-router'
 import { TagBadge } from '@/components/ui/tag-badge'
@@ -76,6 +76,7 @@ const detailRows = computed(() => [
   { icon: UserCircle, label: 'User Name', value: props.contact.profile_name || props.contact.name || '—' },
   { icon: Phone, label: 'Phone No.', value: props.contact.phone_number },
   { icon: Briefcase, label: 'Business No.', value: props.contact.whatsapp_account || '—' },
+  ...(props.contact.ad_headline ? [{ icon: Megaphone, label: 'Came from ad', value: props.contact.ad_headline }] : []),
 ])
 
 const emit = defineEmits<{

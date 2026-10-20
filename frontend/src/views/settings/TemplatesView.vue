@@ -1,24 +1,37 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader, SearchInput, DataTable, IconButton, DeleteConfirmDialog, ErrorState, type Column } from '@/components/shared'
 import { api, templatesService, templateAIService } from '@/services/api'
 import TemplateStatusCards from './templates/TemplateStatusCards.vue'
+import TemplateGallery from './templates/TemplateGallery.vue'
+import TemplateApiDialog from './templates/TemplateApiDialog.vue'
+import WhatsAppTemplatePreview from './templates/WhatsAppTemplatePreview.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { toast } from 'vue-sonner'
-import { Plus, RefreshCw, FileText, Pencil, Trash2, Loader2, MessageSquare, Image, FileIcon, Video, Sparkles, BarChart3 } from 'lucide-vue-next'
+import { Plus, RefreshCw, FileText, Pencil, Trash2, Loader2, MessageSquare, Image, FileIcon, Video, Sparkles, BarChart3, CopyPlus, Eye, Code2, LayoutTemplate } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/api-utils'
 import { useSearchPagination } from '@/composables/useSearchPagination'
-import { getQualityBadgeClass, getQualityRatingLabel } from '@/lib/utils'
+import { getQualityBadgeClass, getQualityRatingLabel, formatDate } from '@/lib/utils'
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+const canWrite = computed(() => authStore.hasPermission('templates', 'write'))
+
+// Gallery of ready-made templates vs. the business's own templates
+const tab = ref(route.query.tab === 'gallery' ? 'gallery' : 'saved')
+watch(tab, (v) => router.replace({ query: { ...route.query, tab: v === 'gallery' ? 'gallery' : undefined } }))
 
 interface WhatsAppAccount {
   id: string
@@ -44,6 +57,7 @@ interface Template {
   created_at: string
   updated_at: string
   quality_rating?: string
+  add_security_recommendation?: boolean
 }
 
 const organizationsStore = useOrganizationsStore()
@@ -60,9 +74,51 @@ const deleteDialogOpen = ref(false)
 const templateToDelete = ref<Template | null>(null)
 const isDeleting = ref(false)
 
-const { searchQuery, currentPage, totalItems, pageSize, handlePageChange } = useSearchPagination({
+const { searchQuery, currentPage, totalItems, perPage, setPageSize, handlePageChange, resetAndFetch } = useSearchPagination({
   fetchFn: () => fetchTemplates(),
 })
+
+// Filters
+const filterStatus = ref('all')
+const filterCategory = ref('all')
+const filterUpdated = ref('any')
+const statusFilterOptions = ['APPROVED', 'PENDING', 'REJECTED', 'PAUSED', 'DISABLED', 'DRAFT']
+const categoryFilterOptions = ['MARKETING', 'UTILITY', 'AUTHENTICATION']
+const updatedFilterOptions = [
+  { value: 'any', days: 0 },
+  { value: '7', days: 7 },
+  { value: '30', days: 30 },
+  { value: '90', days: 90 },
+]
+const hasFilters = computed(() => filterStatus.value !== 'all' || filterCategory.value !== 'all' || filterUpdated.value !== 'any' || !!searchQuery.value)
+function clearFilters() {
+  filterStatus.value = 'all'
+  filterCategory.value = 'all'
+  filterUpdated.value = 'any'
+  searchQuery.value = ''
+}
+watch([filterStatus, filterCategory, filterUpdated], () => resetAndFetch())
+
+function updatedFrom(): string | undefined {
+  const days = updatedFilterOptions.find(o => o.value === filterUpdated.value)?.days
+  if (!days) return undefined
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Preview and API dialogs
+const previewTemplate = ref<Template | null>(null)
+const previewOpen = computed({ get: () => !!previewTemplate.value, set: (v) => { if (!v) previewTemplate.value = null } })
+const apiTemplate = ref<Template | null>(null)
+const apiOpen = ref(false)
+function openApi(tpl: Template) {
+  apiTemplate.value = tpl
+  apiOpen.value = true
+}
+function duplicate(tpl: Template) {
+  router.push({ path: '/templates/new', query: { copy: tpl.id } })
+}
 
 const columns = computed<Column<Template>[]>(() => [
   { key: 'name', label: t('templates.name'), sortable: true },
@@ -70,12 +126,12 @@ const columns = computed<Column<Template>[]>(() => [
   { key: 'status', label: t('templates.status'), sortable: true },
   { key: 'quality_rating', label: t('templates.qualityRating'), sortable: true },
   { key: 'language', label: t('templates.language'), sortable: true },
-  { key: 'header_type', label: t('templates.header') },
-  { key: 'actions', label: '', align: 'right' },
+  { key: 'updated_at', label: t('templates.lastUpdated'), sortable: true },
+  { key: 'actions', label: t('common.actions'), align: 'right' },
 ])
 
-const sortKey = ref('name')
-const sortDirection = ref<'asc' | 'desc'>('asc')
+const sortKey = ref('updated_at')
+const sortDirection = ref<'asc' | 'desc'>('desc')
 
 const languages = [
   { code: 'af', name: 'Afrikaans' },
@@ -206,8 +262,11 @@ async function fetchTemplates() {
     const response = await templatesService.list({
       account: selectedAccount.value !== 'all' ? selectedAccount.value : undefined,
       search: searchQuery.value || undefined,
+      status: filterStatus.value !== 'all' ? filterStatus.value : undefined,
+      category: filterCategory.value !== 'all' ? filterCategory.value : undefined,
+      from: updatedFrom(),
       page: currentPage.value,
-      limit: pageSize
+      limit: perPage.value
     })
     const data = (response.data as any).data || response.data
     templates.value = data.templates || []
@@ -222,18 +281,24 @@ async function fetchTemplates() {
   }
 }
 
+// Syncs the selected account, or every account when "All accounts" is selected
 async function syncTemplates() {
-  if (!selectedAccount.value || selectedAccount.value === 'all') {
+  const names = selectedAccount.value && selectedAccount.value !== 'all'
+    ? [selectedAccount.value]
+    : accounts.value.map(a => a.name)
+  if (!names.length) {
     toast.error(t('templates.selectAccountFirst'))
     return
   }
 
   isSyncing.value = true
   try {
-    const response = await api.post('/templates/sync', {
-      whatsapp_account: selectedAccount.value
-    })
-    toast.success(response.data.data.message || t('templates.syncSuccess'))
+    let message = ''
+    for (const name of names) {
+      const response = await api.post('/templates/sync', { whatsapp_account: name })
+      message = response.data.data.message
+    }
+    toast.success(names.length === 1 && message ? message : t('templates.syncSuccess'))
     await fetchTemplates()
   } catch (error) {
     toast.error(getErrorMessage(error, t('templates.syncFailed')))
@@ -311,7 +376,7 @@ function getHeaderIcon(type: string) {
   <div class="flex flex-col h-full bg-[#0a0a0b] light:bg-gray-50">
     <PageHeader :title="$t('templates.title')" :subtitle="$t('templates.subtitle')" :icon="FileText">
       <template #actions>
-        <Button variant="outline" size="sm" @click="syncTemplates" :disabled="isSyncing || !selectedAccount || selectedAccount === 'all'">
+        <Button variant="outline" size="sm" @click="syncTemplates" :disabled="isSyncing || !accounts.length">
           <Loader2 v-if="isSyncing" class="h-4 w-4 mr-2 animate-spin" />
           <RefreshCw v-else class="h-4 w-4 mr-2" />
           {{ $t('templates.syncFromMeta') }}
@@ -339,7 +404,21 @@ function getHeaderIcon(type: string) {
 
     <ScrollArea class="flex-1">
       <div class="p-6">
-        <div class="space-y-6">
+        <Tabs v-model="tab" class="space-y-6">
+          <TabsList class="h-auto bg-white/[0.04] p-1 ring-1 ring-white/[0.08] light:bg-gray-100 light:ring-gray-200">
+            <TabsTrigger value="saved" class="px-4 py-1.5">
+              <FileText class="mr-2 h-4 w-4" />{{ $t('templates.savedTemplates') }}
+            </TabsTrigger>
+            <TabsTrigger value="gallery" class="px-4 py-1.5">
+              <LayoutTemplate class="mr-2 h-4 w-4" />{{ $t('templateGallery.title') }}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="gallery" class="mt-0">
+            <TemplateGallery :can-write="canWrite" />
+          </TabsContent>
+
+          <TabsContent value="saved" class="mt-0 space-y-6">
           <TemplateStatusCards :counts="statusCounts" />
           <ErrorState
             v-if="error && !isLoading"
@@ -349,29 +428,53 @@ function getHeaderIcon(type: string) {
             @retry="fetchTemplates"
           />
           <Card v-else>
-            <CardHeader>
-              <div class="flex items-center justify-between flex-wrap gap-4">
-                <div>
-                  <CardTitle>{{ $t('templates.yourTemplates') }}</CardTitle>
-                  <CardDescription>{{ $t('templates.yourTemplatesDesc') }}</CardDescription>
-                </div>
-                <div class="flex items-center gap-4 flex-wrap">
-                  <div class="flex items-center gap-2">
-                    <Label class="text-sm text-muted-foreground">{{ $t('templates.account') }}:</Label>
-                    <Select v-model="selectedAccount" @update:model-value="onAccountChange">
-                      <SelectTrigger class="w-[180px]">
-                        <SelectValue :placeholder="$t('templates.allAccounts')" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{{ $t('templates.allAccounts') }}</SelectItem>
-                        <SelectItem v-for="account in accounts" :key="account.id" :value="account.name">
-                          {{ account.name }}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <SearchInput v-model="searchQuery" :placeholder="$t('templates.searchTemplates') + '...'" class="w-64" />
-                </div>
+            <CardHeader class="space-y-4">
+              <div>
+                <CardTitle>{{ $t('templates.yourTemplates') }}</CardTitle>
+                <CardDescription>{{ $t('templates.yourTemplatesDesc') }}</CardDescription>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <Select v-model="selectedAccount" @update:model-value="onAccountChange">
+                  <SelectTrigger class="w-[170px]" :aria-label="$t('templates.account')">
+                    <SelectValue :placeholder="$t('templates.allAccounts')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{{ $t('templates.allAccounts') }}</SelectItem>
+                    <SelectItem v-for="account in accounts" :key="account.id" :value="account.name">
+                      {{ account.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select v-model="filterStatus">
+                  <SelectTrigger class="w-[150px]" :aria-label="$t('templates.status')">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{{ $t('templates.allStatuses') }}</SelectItem>
+                    <SelectItem v-for="st in statusFilterOptions" :key="st" :value="st">{{ $t(`templates.statusNames.${st}`) }}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select v-model="filterCategory">
+                  <SelectTrigger class="w-[160px]" :aria-label="$t('templates.category')">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{{ $t('templates.allCategories') }}</SelectItem>
+                    <SelectItem v-for="c in categoryFilterOptions" :key="c" :value="c">{{ $t(`templates.categoryNames.${c}`) }}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select v-model="filterUpdated">
+                  <SelectTrigger class="w-[160px]" :aria-label="$t('templates.lastUpdated')">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="o in updatedFilterOptions" :key="o.value" :value="o.value">
+                      {{ o.days ? $t('templates.updatedWithin', { n: o.days }) : $t('templates.updatedAnyTime') }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <SearchInput v-model="searchQuery" :placeholder="$t('templates.searchTemplates') + '...'" class="w-full sm:w-56" />
+                <Button v-if="hasFilters" variant="ghost" size="sm" @click="clearFilters">{{ $t('common.clearFilters') }}</Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -380,21 +483,26 @@ function getHeaderIcon(type: string) {
                 :columns="columns"
                 :is-loading="isLoading"
                 :empty-icon="FileText"
-                :empty-title="$t('templates.noTemplatesFound')"
-                :empty-description="$t('templates.noTemplatesFoundDesc')"
+                :empty-title="hasFilters ? $t('templates.noMatchingTemplates') : $t('templates.noTemplatesFound')"
+                :empty-description="hasFilters ? $t('templates.noMatchingTemplatesDesc') : $t('templates.noTemplatesFoundDesc')"
                 server-pagination
                 :current-page="currentPage"
                 :total-items="totalItems"
-                :page-size="pageSize"
-                item-name="templates"
+                :page-size="perPage"
+                :page-size-options="[10, 25, 50, 100]"
+                :item-name="$t('resources.templates')"
                 @page-change="handlePageChange"
+                @update:page-size="setPageSize"
                 v-model:sort-key="sortKey"
                 v-model:sort-direction="sortDirection"
               >
                 <template #cell-name="{ item: template }">
-                  <RouterLink :to="`/templates/${template.id}`" class="text-inherit no-underline hover:opacity-80">
-                    <span class="font-medium">{{ template.display_name || template.name }}</span>
-                    <p class="text-xs font-mono text-muted-foreground">{{ template.name }}</p>
+                  <RouterLink :to="`/templates/${template.id}`" class="flex items-center gap-2.5 text-inherit no-underline hover:opacity-80">
+                    <component :is="getHeaderIcon(template.header_type)" class="h-4 w-4 shrink-0 text-muted-foreground" :aria-label="template.header_type || 'TEXT'" />
+                    <span class="min-w-0">
+                      <span class="block truncate font-medium">{{ template.display_name || template.name }}</span>
+                      <span v-if="template.display_name && template.display_name !== template.name" class="block truncate text-xs font-mono text-muted-foreground">{{ template.name }}</span>
+                    </span>
                   </RouterLink>
                 </template>
                 <template #cell-category="{ item: template }">
@@ -416,20 +524,16 @@ function getHeaderIcon(type: string) {
                 <template #cell-language="{ item: template }">
                   <span class="text-muted-foreground">{{ getLanguageName(template.language) }}</span>
                 </template>
-                <template #cell-header_type="{ item: template }">
-                  <div class="flex items-center gap-1">
-                    <component :is="getHeaderIcon(template.header_type)" class="h-4 w-4 text-muted-foreground" />
-                    <span class="text-muted-foreground text-sm">{{ template.header_type || 'NONE' }}</span>
-                  </div>
+                <template #cell-updated_at="{ item: template }">
+                  <span class="whitespace-nowrap text-sm text-muted-foreground">{{ template.updated_at && !template.updated_at.startsWith('0001') ? formatDate(template.updated_at) : '—' }}</span>
                 </template>
                 <template #cell-actions="{ item: template }">
-                  <div class="flex items-center justify-end gap-1">
+                  <div class="flex items-center justify-end gap-0.5">
+                    <IconButton :icon="Eye" :label="$t('templates.preview')" class="h-8 w-8" @click="previewTemplate = template" />
+                    <IconButton v-if="canWrite" :icon="CopyPlus" :label="$t('templates.duplicate')" class="h-8 w-8" @click="duplicate(template)" />
+                    <IconButton v-if="template.status === 'APPROVED'" :icon="Code2" :label="$t('templates.apiCode')" class="h-8 w-8" @click="openApi(template)" />
                     <RouterLink :to="`/templates/${template.id}`">
-                      <IconButton
-                        :icon="Pencil"
-                        :label="$t('common.edit')"
-                        class="h-8 w-8"
-                      />
+                      <IconButton :icon="Pencil" :label="$t('common.edit')" class="h-8 w-8" />
                     </RouterLink>
                     <IconButton
                       :icon="Trash2"
@@ -440,8 +544,15 @@ function getHeaderIcon(type: string) {
                   </div>
                 </template>
                 <template #empty-action>
-                  <div class="flex items-center justify-center gap-2">
-                    <Button variant="outline" size="sm" @click="syncTemplates" :disabled="!selectedAccount || selectedAccount === 'all'">
+                  <div v-if="hasFilters" class="flex justify-center">
+                    <Button variant="outline" size="sm" @click="clearFilters">{{ $t('common.clearFilters') }}</Button>
+                  </div>
+                  <div v-else class="flex flex-wrap items-center justify-center gap-2">
+                    <Button variant="outline" size="sm" @click="tab = 'gallery'">
+                      <LayoutTemplate class="h-4 w-4 mr-2" />
+                      {{ $t('templateGallery.browse') }}
+                    </Button>
+                    <Button variant="outline" size="sm" @click="syncTemplates" :disabled="isSyncing || !accounts.length">
                       <RefreshCw class="h-4 w-4 mr-2" />
                       {{ $t('templates.syncFromMeta') }}
                     </Button>
@@ -456,9 +567,29 @@ function getHeaderIcon(type: string) {
               </DataTable>
             </CardContent>
           </Card>
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </ScrollArea>
+
+    <!-- Preview -->
+    <Dialog v-model:open="previewOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2">
+            {{ previewTemplate?.display_name || previewTemplate?.name }}
+            <Badge v-if="previewTemplate" :class="getStatusBadgeClass(previewTemplate.status)" class="text-[10px]">{{ previewTemplate.status }}</Badge>
+          </DialogTitle>
+        </DialogHeader>
+        <WhatsAppTemplatePreview v-if="previewTemplate" :draft="previewTemplate" />
+        <div v-if="previewTemplate" class="flex justify-end gap-2">
+          <Button v-if="canWrite" variant="outline" size="sm" @click="duplicate(previewTemplate)"><CopyPlus class="h-4 w-4" />{{ $t('templates.duplicate') }}</Button>
+          <RouterLink :to="`/templates/${previewTemplate.id}`"><Button size="sm"><Pencil class="h-4 w-4" />{{ $t('common.edit') }}</Button></RouterLink>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <TemplateApiDialog v-model:open="apiOpen" :template="apiTemplate" />
 
     <!-- Delete Confirmation Dialog -->
     <DeleteConfirmDialog

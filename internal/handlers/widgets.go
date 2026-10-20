@@ -636,8 +636,8 @@ func widgetToResponse(w models.Widget, currentUserID uuid.UUID) WidgetResponse {
 		IsShared:     w.IsShared,
 		IsDefault:    w.IsDefault,
 		IsOwner:      w.UserID != nil && *w.UserID == currentUserID,
-		CreatedAt:    w.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:    w.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:    w.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:    w.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }
 

@@ -102,6 +102,12 @@ func (w *Worker) HandleRecipientJob(ctx context.Context, job *queue.RecipientJob
 		return nil // Don't retry
 	}
 
+	if contact.IsBlocked {
+		w.updateRecipientStatus(job.RecipientID, models.MessageStatusFailed, "", "Contact is blocked")
+		w.incrementCampaignCount(job.CampaignID, "failed_count")
+		return nil
+	}
+
 	// Check marketing opt-out
 	if contact.MarketingOptOut && campaign.Template != nil && strings.EqualFold(campaign.Template.Category, "MARKETING") {
 		w.Log.Info("Skipping marketing message for opted-out contact", "contact_id", contact.ID, "phone", job.PhoneNumber)
@@ -134,7 +140,7 @@ func (w *Worker) HandleRecipientJob(ctx context.Context, job *queue.RecipientJob
 	}
 
 	// Send template message
-	waMessageID, err := w.sendTemplateMessage(ctx, &account, campaign.Template, recipient, campaign.HeaderMediaID, campaign.HeaderMediaFilename)
+	waMessageID, err := w.sendTemplateMessage(ctx, &account, campaign.Template, w.withTrackedLinks(&campaign, recipient), campaign.HeaderMediaID, campaign.HeaderMediaFilename)
 
 	// Create Message record
 	message := models.Message{

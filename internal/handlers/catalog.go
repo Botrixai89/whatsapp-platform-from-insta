@@ -555,8 +555,8 @@ func catalogToResponse(c models.Catalog, productCount int) CatalogResponse {
 		Name:            c.Name,
 		IsActive:        c.IsActive,
 		ProductCount:    productCount,
-		CreatedAt:       c.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:       c.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:       c.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:       c.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }
 
@@ -572,7 +572,7 @@ func productToResponse(p models.CatalogProduct) CatalogProductResponse {
 		ImageURL:      p.ImageURL,
 		RetailerID:    p.RetailerID,
 		IsActive:      p.IsActive,
-		CreatedAt:     p.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:     p.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:     p.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:     p.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }

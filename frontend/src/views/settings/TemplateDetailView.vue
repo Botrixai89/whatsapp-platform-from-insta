@@ -12,6 +12,7 @@ import AuditLogPanel from '@/components/shared/AuditLogPanel.vue'
 import UnsavedChangesDialog from '@/components/shared/UnsavedChangesDialog.vue'
 import AITemplateGenerator from './templates/AITemplateGenerator.vue'
 import WhatsAppTemplatePreview from './templates/WhatsAppTemplatePreview.vue'
+import { galleryTemplates, galleryToDraft } from './templates/templateGallery'
 import type { TemplateAIDraft } from '@/services/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -685,12 +686,50 @@ function applyAIDraft(d: TemplateAIDraft) {
   }
 }
 
+// A new template can start from the gallery (?gallery=<id>) or as a copy of another (?copy=<id>)
+async function prefillFromQuery() {
+  const galleryId = route.query.gallery
+  if (typeof galleryId === 'string') {
+    const g = galleryTemplates.find(x => x.id === galleryId)
+    if (g) applyAIDraft({ ...galleryToDraft(g), warnings: [] } as TemplateAIDraft)
+    return
+  }
+  const copyId = route.query.copy
+  if (typeof copyId !== 'string') return
+  try {
+    const src = (await templatesService.get(copyId)).data as any
+    const tpl = src.data || src
+    const isMedia = ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(tpl.header_type || '')
+    form.value = {
+      ...form.value,
+      whatsapp_account: tpl.whatsapp_account || form.value.whatsapp_account,
+      name: `${tpl.name}_copy`.slice(0, 512),
+      display_name: tpl.display_name ? `${tpl.display_name} (copy)` : '',
+      language: tpl.language || 'en',
+      category: tpl.category || 'MARKETING',
+      header_type: tpl.header_type || 'NONE',
+      // Meta needs a fresh sample upload for media headers
+      header_content: isMedia ? '' : (tpl.header_content || ''),
+      body_content: tpl.body_content || '',
+      footer_content: tpl.footer_content || '',
+      buttons: (tpl.buttons || []).map((b: any) => ({ ...b, example: Array.isArray(b.example) ? b.example[0] ?? '' : b.example })),
+      sample_values: (tpl.sample_values || []).map((sv: any) => ({ ...sv })),
+      add_security_recommendation: !!tpl.add_security_recommendation,
+      code_expiration_minutes: tpl.code_expiration_minutes || 0,
+    }
+    if (isMedia) toast.info(t('templates.copyNeedsMedia'))
+  } catch (err) {
+    toast.error(getErrorMessage(err, t('common.failedLoad', { resource: t('resources.template') })))
+  }
+}
+
 onMounted(async () => {
   await Promise.all([loadAccounts(), loadFlows()])
   if (isNew.value) {
     isLoading.value = false
     hasChanges.value = false
     if (route.query.ai === '1') isAIOpen.value = true
+    await prefillFromQuery()
   } else {
     await loadTemplate()
   }

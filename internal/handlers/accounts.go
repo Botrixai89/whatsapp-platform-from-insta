@@ -47,6 +47,8 @@ type AccountResponse struct {
 	IsDefaultOutgoing      bool       `json:"is_default_outgoing"`
 	AutoReadReceipt        bool       `json:"auto_read_receipt"`
 	BusinessCallingEnabled bool       `json:"business_calling_enabled"`
+	Provider               string     `json:"provider"`
+	ProviderURL            string     `json:"provider_url,omitempty"`
 	Status                 string     `json:"status"`
 	HasAccessToken         bool       `json:"has_access_token"`
 	HasAppSecret           bool       `json:"has_app_secret"`
@@ -343,6 +345,9 @@ func (a *App) TestAccountConnection(r *fastglue.Request) error {
 	if err != nil {
 		return nil
 	}
+	if account.Provider == whatsapp.ProviderHeltar {
+		return a.testProviderAccount(r, account)
+	}
 
 	// Use the comprehensive validation function
 	if err := a.validateAccountCredentials(account.PhoneID, account.BusinessID, account.AccessToken, account.APIVersion); err != nil {
@@ -469,13 +474,15 @@ func accountToResponse(acc models.WhatsAppAccount) AccountResponse {
 		IsDefaultOutgoing:      acc.IsDefaultOutgoing,
 		AutoReadReceipt:        acc.AutoReadReceipt,
 		BusinessCallingEnabled: acc.BusinessCallingEnabled,
+		Provider:               acc.Provider,
+		ProviderURL:            acc.ProviderURL,
 		Status:                 acc.Status,
 		HasAccessToken:         acc.AccessToken != "",
 		HasAppSecret:           acc.AppSecret != "",
 		CreatedByID:            acc.CreatedByID,
 		UpdatedByID:            acc.UpdatedByID,
-		CreatedAt:              acc.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:              acc.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:              acc.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:              acc.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if acc.CreatedBy != nil {
 		resp.CreatedByName = acc.CreatedBy.FullName

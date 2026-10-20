@@ -316,12 +316,16 @@ type WhatsAppAccount struct {
 	// Set to true only after Meta enrolls this number in the WhatsApp Business
 	// Calling API. Used by the canned-response editor to disable the Call
 	// button option, and by the send path to refuse voice_call sends.
-	BusinessCallingEnabled bool       `gorm:"default:false" json:"business_calling_enabled"`
-	IsSMB                  bool       `gorm:"default:false" json:"is_smb"`
-	Status                 string     `gorm:"size:20;default:'active'" json:"status"`
-	Pin                    string     `gorm:"size:255" json:"-"` // 6-digit 2FA PIN (encrypted)
-	CreatedByID            *uuid.UUID `gorm:"type:uuid" json:"created_by_id,omitempty"`
-	UpdatedByID            *uuid.UUID `gorm:"type:uuid" json:"updated_by_id,omitempty"`
+	BusinessCallingEnabled bool `gorm:"default:false" json:"business_calling_enabled"`
+	IsSMB                  bool `gorm:"default:false" json:"is_smb"`
+	// Provider is "meta" (Graph API directly) or "heltar" (a Heltar-compatible API such as
+	// the BotrixAI white-label). For heltar, AccessToken holds the provider API key.
+	Provider    string     `gorm:"size:20;default:'meta'" json:"provider"`
+	ProviderURL string     `gorm:"size:255" json:"provider_url"`
+	Status      string     `gorm:"size:20;default:'active'" json:"status"`
+	Pin         string     `gorm:"size:255" json:"-"` // 6-digit 2FA PIN (encrypted)
+	CreatedByID *uuid.UUID `gorm:"type:uuid" json:"created_by_id,omitempty"`
+	UpdatedByID *uuid.UUID `gorm:"type:uuid" json:"updated_by_id,omitempty"`
 
 	// Relations
 	Organization *Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
@@ -341,6 +345,8 @@ func (a *WhatsAppAccount) ToWAAccount() *whatsapp.Account {
 		AppID:       a.AppID,
 		APIVersion:  a.APIVersion,
 		AccessToken: a.AccessToken,
+		Provider:    a.Provider,
+		ProviderURL: a.ProviderURL,
 	}
 }
 
@@ -368,6 +374,14 @@ type Contact struct {
 	ConversationStatus string `gorm:"size:20;default:'open';index" json:"conversation_status"`
 	// BotPaused stops the chatbot from replying to this contact only.
 	BotPaused bool `gorm:"default:false" json:"bot_paused"`
+	// IsBlocked drops the contact's incoming messages and refuses sends to them.
+	IsBlocked bool `gorm:"default:false;index" json:"is_blocked"`
+	// Last Click-to-WhatsApp ad this contact came from (see AdReferral for history)
+	AdHeadline  string     `gorm:"type:text" json:"ad_headline,omitempty"`
+	AdSourceURL string     `gorm:"type:text" json:"ad_source_url,omitempty"`
+	AdClickedAt *time.Time `json:"ad_clicked_at,omitempty"`
+	// OptOutSource records why MarketingOptOut is set: "keyword" (they replied STOP), "meta" or "manual".
+	OptOutSource string `gorm:"size:20" json:"opt_out_source,omitempty"`
 
 	// Marketing opt-out (from Meta user_preferences webhook)
 	MarketingOptOut bool `gorm:"default:false" json:"marketing_opt_out"`

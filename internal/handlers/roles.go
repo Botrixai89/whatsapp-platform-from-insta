@@ -418,8 +418,8 @@ func roleToResponse(role models.CustomRole, userCount int64) RoleResponse {
 		IsDefault:   role.IsDefault,
 		Permissions: permissions,
 		UserCount:   userCount,
-		CreatedAt:   role.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:   role.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:   role.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:   role.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }
 

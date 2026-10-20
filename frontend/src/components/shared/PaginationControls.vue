@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,11 +16,19 @@ const props = defineProps<{
   totalItems: number
   pageSize: number
   itemName?: string
+  /** Offer a rows-per-page picker with these sizes */
+  pageSizeOptions?: number[]
 }>()
 
 const emit = defineEmits<{
   'update:currentPage': [page: number]
+  'update:pageSize': [size: number]
 }>()
+
+function onPageSize(v: unknown) {
+  const n = Number(v)
+  if (n > 0) emit('update:pageSize', n)
+}
 
 const paginationInfo = computed(() => {
   const start = (props.currentPage - 1) * props.pageSize + 1
@@ -36,11 +45,21 @@ function goToPage(page: number | '...') {
 </script>
 
 <template>
-  <div class="flex items-center justify-between">
-    <p class="text-sm text-muted-foreground">
-      Showing {{ paginationInfo.start }} to {{ paginationInfo.end }} of {{ totalItems }} {{ itemName || 'items' }}
-    </p>
-    <div class="flex items-center gap-1">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <p class="text-sm text-muted-foreground">
+        {{ $t('common.showingRange', { start: paginationInfo.start, end: paginationInfo.end, total: totalItems, items: itemName || $t('common.items') }) }}
+      </p>
+      <Select v-if="pageSizeOptions?.length" :model-value="String(pageSize)" @update:model-value="onPageSize">
+        <SelectTrigger class="h-8 w-[118px] text-xs" :aria-label="$t('common.rowsPerPage')">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem v-for="n in pageSizeOptions" :key="n" :value="String(n)">{{ $t('common.perPage', { n }) }}</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+    <div v-if="totalPages > 1" class="flex items-center gap-1">
       <Button
         variant="outline"
         size="icon"

@@ -33,6 +33,8 @@ const props = withDefaults(defineProps<{
   totalItems?: number
   pageSize?: number
   itemName?: string
+  // Sizes for a rows-per-page picker; parent handles update:pageSize
+  pageSizeOptions?: number[]
   // Optional max height for the table area (e.g., 'calc(100vh - 320px)')
   // When set, the table body becomes scrollable while header and pagination stay fixed
   maxHeight?: string
@@ -50,6 +52,7 @@ const emit = defineEmits<{
   'sort': [key: string, direction: 'asc' | 'desc']
   'update:currentPage': [page: number]
   'page-change': [page: number]
+  'update:pageSize': [size: number]
 }>()
 
 defineSlots<{
@@ -128,7 +131,8 @@ const totalPages = computed(() => {
   return Math.ceil(effectiveTotalItems.value / props.pageSize) || 1
 })
 
-const needsPagination = computed(() => props.serverPagination && totalPages.value > 1)
+const needsPagination = computed(() => props.serverPagination && (totalPages.value > 1 ||
+  (!!props.pageSizeOptions?.length && effectiveTotalItems.value > Math.min(...props.pageSizeOptions))))
 
 // Display items - relies on server to handle pagination when serverPagination is enabled
 const displayItems = computed(() => {
@@ -242,7 +246,9 @@ function getRowKey(item: T, index: number): string {
       :total-items="totalItems"
       :page-size="pageSize"
       :item-name="itemName"
+      :page-size-options="pageSizeOptions"
       @update:current-page="handlePageChange"
+      @update:page-size="emit('update:pageSize', $event)"
     />
   </div>
 </template>

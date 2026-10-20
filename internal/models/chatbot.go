@@ -267,8 +267,12 @@ type AIContext struct {
 	TriggerKeywords StringArray `gorm:"type:jsonb" json:"trigger_keywords"`
 	StaticContent   string      `gorm:"type:text" json:"static_content"`
 	ApiConfig       JSONB       `gorm:"type:jsonb" json:"api_config"` // url, method, headers, body
-	CreatedByID     *uuid.UUID  `gorm:"type:uuid" json:"created_by_id,omitempty"`
-	UpdatedByID     *uuid.UUID  `gorm:"type:uuid" json:"updated_by_id,omitempty"`
+	// Knowledge contexts: where the text came from and how much of it there is
+	SourceName  string     `gorm:"size:500" json:"source_name,omitempty"`
+	SourceType  string     `gorm:"size:20" json:"source_type,omitempty"` // file, url
+	SourceChars int        `gorm:"default:0" json:"source_chars"`
+	CreatedByID *uuid.UUID `gorm:"type:uuid" json:"created_by_id,omitempty"`
+	UpdatedByID *uuid.UUID `gorm:"type:uuid" json:"updated_by_id,omitempty"`
 
 	// Relations
 	Organization *Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`

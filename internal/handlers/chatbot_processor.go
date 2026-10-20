@@ -107,6 +107,7 @@ type IncomingTextMessage struct {
 		From string `json:"from"`
 		ID   string `json:"id"` // WhatsApp message ID being replied to
 	} `json:"context,omitempty"`
+	Referral *IncomingReferral `json:"referral,omitempty"` // set when the chat started from a Click-to-WhatsApp ad
 	Reaction *struct {
 		MessageID string `json:"message_id"` // WhatsApp message ID being reacted to
 		Emoji     string `json:"emoji"`      // The emoji reaction (empty string = remove reaction)
@@ -163,6 +164,17 @@ func (a *App) processIncomingMessageFull(phoneNumberID string, msg IncomingTextM
 		return
 	}
 
+	// Blocked contacts never reach the inbox, the bot or any automation
+	if contact.IsBlocked {
+		a.Log.Info("Dropped message from blocked contact", "contact_id", contact.ID)
+		return
+	}
+
+	// Attribute the lead to the Click-to-WhatsApp ad it came from
+	if msg.Referral != nil {
+		a.recordAdReferral(account, contact, msg.ID, msg.Referral)
+	}
+
 	// Store BSUID if provided and not already set
 	if msg.FromUserID != "" && contact.BSUID != msg.FromUserID {
 		a.DB.Model(contact).Update("bsuid", msg.FromUserID)
@@ -196,6 +208,14 @@ func (a *App) processIncomingMessageFull(phoneNumberID string, msg IncomingTextM
 
 	// Clear chatbot tracking since client has replied
 	a.ClearContactChatbotTracking(contact.ID)
+
+	// A reply ends "stop on reply" drip sequences for this contact
+	a.stopSequencesOnReply(contact.ID)
+
+	// STOP/START keywords and CSAT answers are handled here, not by the chatbot
+	if a.handleEngagementReply(account, contact, messageText, buttonID) {
+		return
+	}
 
 	// Check for active agent transfer - skip chatbot processing if transferred
 	if a.hasActiveAgentTransfer(account.OrganizationID, contact.ID) {
@@ -870,6 +890,16 @@ func (a *App) buildAIContext(orgID uuid.UUID, session *models.ChatbotSession, us
 		case models.ContextTypeStatic:
 			content = ctx.StaticContent
 
+		case models.ContextTypeKnowledge:
+			// Optional instructions, then the passages that best match the question
+			content = ctx.StaticContent
+			if passages := a.relevantKnowledge(ctx.ID, userMessage); passages != "" {
+				if content != "" {
+					content += "\n\nReference material:\n"
+				}
+				content += passages
+			}
+
 		case models.ContextTypeAPI:
 			// Start with static content/prompt if provided
 			content = ctx.StaticContent
@@ -1447,7 +1477,7 @@ func (a *App) extractMessageContent(ctx context.Context, msg IncomingTextMessage
 		}
 		// Download and save media locally
 		waAccount := a.toWhatsAppAccount(account)
-		if localPath, err := a.DownloadAndSaveMedia(ctx, msg.Image.ID, msg.Image.MimeType, waAccount); err != nil {
+		if localPath, err := a.DownloadAndSaveMedia(ctx, mediaRef(waAccount, msg.ID, msg.Image.ID), msg.Image.MimeType, waAccount); err != nil {
 			a.Log.Error("Failed to download image", "error", err, "media_id", msg.Image.ID)
 		} else {
 			extracted.Media.MediaURL = localPath
@@ -1461,7 +1491,7 @@ func (a *App) extractMessageContent(ctx context.Context, msg IncomingTextMessage
 		}
 		// Download and save media locally
 		waAccount := a.toWhatsAppAccount(account)
-		if localPath, err := a.DownloadAndSaveMedia(ctx, msg.Document.ID, msg.Document.MimeType, waAccount); err != nil {
+		if localPath, err := a.DownloadAndSaveMedia(ctx, mediaRef(waAccount, msg.ID, msg.Document.ID), msg.Document.MimeType, waAccount); err != nil {
 			a.Log.Error("Failed to download document", "error", err, "media_id", msg.Document.ID)
 		} else {
 			extracted.Media.MediaURL = localPath
@@ -1474,7 +1504,7 @@ func (a *App) extractMessageContent(ctx context.Context, msg IncomingTextMessage
 		}
 		// Download and save media locally
 		waAccount := a.toWhatsAppAccount(account)
-		if localPath, err := a.DownloadAndSaveMedia(ctx, msg.Video.ID, msg.Video.MimeType, waAccount); err != nil {
+		if localPath, err := a.DownloadAndSaveMedia(ctx, mediaRef(waAccount, msg.ID, msg.Video.ID), msg.Video.MimeType, waAccount); err != nil {
 			a.Log.Error("Failed to download video", "error", err, "media_id", msg.Video.ID)
 		} else {
 			extracted.Media.MediaURL = localPath
@@ -1486,7 +1516,7 @@ func (a *App) extractMessageContent(ctx context.Context, msg IncomingTextMessage
 		}
 		// Download and save media locally
 		waAccount := a.toWhatsAppAccount(account)
-		if localPath, err := a.DownloadAndSaveMedia(ctx, msg.Audio.ID, msg.Audio.MimeType, waAccount); err != nil {
+		if localPath, err := a.DownloadAndSaveMedia(ctx, mediaRef(waAccount, msg.ID, msg.Audio.ID), msg.Audio.MimeType, waAccount); err != nil {
 			a.Log.Error("Failed to download audio", "error", err, "media_id", msg.Audio.ID)
 		} else {
 			extracted.Media.MediaURL = localPath
@@ -1498,7 +1528,7 @@ func (a *App) extractMessageContent(ctx context.Context, msg IncomingTextMessage
 		}
 		// Download and save media locally
 		waAccount := a.toWhatsAppAccount(account)
-		if localPath, err := a.DownloadAndSaveMedia(ctx, msg.Sticker.ID, msg.Sticker.MimeType, waAccount); err != nil {
+		if localPath, err := a.DownloadAndSaveMedia(ctx, mediaRef(waAccount, msg.ID, msg.Sticker.ID), msg.Sticker.MimeType, waAccount); err != nil {
 			a.Log.Error("Failed to download sticker", "error", err, "media_id", msg.Sticker.ID)
 		} else {
 			extracted.Media.MediaURL = localPath

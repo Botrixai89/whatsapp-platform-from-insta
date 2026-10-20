@@ -42,6 +42,10 @@ type ContactResponse struct {
 	MarketingOptOut    bool       `json:"marketing_opt_out"`
 	ConversationStatus string     `json:"conversation_status"`
 	BotPaused          bool       `json:"bot_paused"`
+	IsBlocked          bool       `json:"is_blocked"`
+	OptOutSource       string     `json:"opt_out_source,omitempty"`
+	AdHeadline         string     `json:"ad_headline,omitempty"`
+	AdClickedAt        *time.Time `json:"ad_clicked_at,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }
@@ -217,6 +221,10 @@ func (a *App) ListContacts(r *fastglue.Request) error {
 			MarketingOptOut:    c.MarketingOptOut,
 			ConversationStatus: conversationStatus(c.ConversationStatus),
 			BotPaused:          c.BotPaused,
+			IsBlocked:          c.IsBlocked,
+			OptOutSource:       c.OptOutSource,
+			AdHeadline:         c.AdHeadline,
+			AdClickedAt:        c.AdClickedAt,
 			CreatedAt:          c.CreatedAt,
 			UpdatedAt:          c.UpdatedAt,
 		}
@@ -1275,9 +1283,14 @@ func (a *App) UpdateConversation(r *fastglue.Request) error {
 	if len(updates) == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Nothing to update", nil, "")
 	}
+	wasOpen := conversationStatus(contact.ConversationStatus) == "open"
 	if err := a.DB.Model(&contact).Updates(updates).Error; err != nil {
 		a.Log.Error("Failed to update conversation", "error", err, "contact_id", contactID)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to update conversation", nil, "")
+	}
+	if wasOpen && req.Status != nil && *req.Status == "closed" {
+		closed := contact
+		go a.sendCSATSurvey(&closed)
 	}
 
 	return r.SendEnvelope(map[string]any{
@@ -1419,6 +1432,14 @@ func (a *App) UpdateContactTags(r *fastglue.Request) error {
 		return nil
 	}
 
+	// Remember the old tags so newly added ones can start tag-triggered sequences
+	previous := map[string]bool{}
+	for _, t := range contact.Tags {
+		if s, ok := t.(string); ok {
+			previous[s] = true
+		}
+	}
+
 	// Convert tags to JSONBArray
 	tagsArray := make(models.JSONBArray, len(req.Tags))
 	for i, tag := range req.Tags {
@@ -1430,6 +1451,14 @@ func (a *App) UpdateContactTags(r *fastglue.Request) error {
 		a.Log.Error("Failed to update contact tags", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to update contact tags", nil, "")
 	}
+
+	var added []string
+	for _, tag := range req.Tags {
+		if !previous[tag] {
+			added = append(added, tag)
+		}
+	}
+	a.enrollByTags(orgID, contactID, added)
 
 	// Reload contact to get updated tags
 	if err := a.DB.First(contact, contactID).Error; err != nil {
@@ -1727,6 +1756,10 @@ func (a *App) buildContactResponse(contact *models.Contact, orgID uuid.UUID) Con
 		MarketingOptOut:    contact.MarketingOptOut,
 		ConversationStatus: conversationStatus(contact.ConversationStatus),
 		BotPaused:          contact.BotPaused,
+		IsBlocked:          contact.IsBlocked,
+		OptOutSource:       contact.OptOutSource,
+		AdHeadline:         contact.AdHeadline,
+		AdClickedAt:        contact.AdClickedAt,
 		CreatedAt:          contact.CreatedAt,
 		UpdatedAt:          contact.UpdatedAt,
 	}

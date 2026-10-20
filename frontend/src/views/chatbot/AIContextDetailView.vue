@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { chatbotService } from '@/services/api'
+import { chatbotService, api } from '@/services/api'
+import { getErrorMessage } from '@/lib/api-utils'
 import { toast } from 'vue-sonner'
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 import DetailPageLayout from '@/components/shared/DetailPageLayout.vue'
@@ -23,13 +24,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Sparkles, Save } from 'lucide-vue-next'
+import { Sparkles, Save, FileText, Globe, Loader2, Upload } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
 const contextId = computed(() => route.params.id as string)
+
+// Knowledge base: upload a document or read a website into this context
+const knowledgeUrl = ref('')
+const isIngesting = ref(false)
+const knowledgeFileInput = ref<HTMLInputElement | null>(null)
+async function ingestKnowledge(payload: FormData) {
+  isIngesting.value = true
+  try {
+    const res = await api.post(`/chatbot/ai-contexts/${contextId.value}/knowledge`, payload, { headers: { 'Content-Type': 'multipart/form-data' } })
+    const info = res.data.data
+    contextData.value = { ...contextData.value, context_type: 'knowledge', source_name: info.source_name, source_type: info.source_type, source_chars: info.chars }
+    toast.success(t('aiContexts.knowledgeLoaded', { chars: info.chars.toLocaleString(), chunks: info.chunks }))
+    knowledgeUrl.value = ''
+  } catch (e) {
+    toast.error(getErrorMessage(e, t('aiContexts.knowledgeFailed', 'Could not read that source')))
+  } finally {
+    isIngesting.value = false
+    if (knowledgeFileInput.value) knowledgeFileInput.value.value = ''
+  }
+}
+function onKnowledgeFile(ev: Event) {
+  const file = (ev.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const fd = new FormData()
+  fd.append('file', file)
+  ingestKnowledge(fd)
+}
+function readWebsite() {
+  if (!knowledgeUrl.value.trim()) return
+  const fd = new FormData()
+  fd.append('url', knowledgeUrl.value.trim())
+  ingestKnowledge(fd)
+}
 const isNew = computed(() => contextId.value === 'new')
 const contextData = ref<any>(null)
 const isLoading = ref(true)
@@ -223,6 +257,7 @@ onMounted(async () => {
             <SelectContent>
               <SelectItem value="static">{{ $t('aiContexts.staticContent', 'Static Content') }}</SelectItem>
               <SelectItem value="api">{{ $t('aiContexts.apiFetch', 'API Fetch') }}</SelectItem>
+              <SelectItem value="knowledge">{{ $t('aiContexts.knowledgeType', 'Knowledge base (document or website)') }}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -262,6 +297,39 @@ onMounted(async () => {
             <Label class="text-xs">{{ $t('aiContexts.enabled', 'Enabled') }}</Label>
           </div>
         </div>
+      </CardContent>
+    </Card>
+
+    <!-- Knowledge base source (document or website) -->
+    <Card v-if="form.context_type === 'knowledge'">
+      <CardHeader class="pb-3">
+        <CardTitle class="text-sm font-medium">{{ $t('aiContexts.knowledgeTitle', 'Knowledge source') }}</CardTitle>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <p class="text-xs text-muted-foreground">{{ $t('aiContexts.knowledgeHint', 'The AI answers from this text. For every customer question, only the most relevant passages are used, so long documents work well.') }}</p>
+        <p v-if="isNew" class="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">{{ $t('aiContexts.knowledgeSaveFirst', 'Save this context first, then add a document or website.') }}</p>
+        <template v-else>
+          <div v-if="contextData?.source_name" class="flex items-center gap-3 rounded-lg border p-3 text-sm">
+            <component :is="contextData.source_type === 'url' ? Globe : FileText" class="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-medium">{{ contextData.source_name }}</p>
+              <p class="text-xs text-muted-foreground">{{ $t('aiContexts.knowledgeChars', { n: (contextData.source_chars || 0).toLocaleString() }) }}</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <input ref="knowledgeFileInput" type="file" accept=".pdf,.txt,.md,.csv" class="hidden" @change="onKnowledgeFile" />
+            <Button variant="outline" size="sm" :disabled="isIngesting" @click="knowledgeFileInput?.click()">
+              <Loader2 v-if="isIngesting" class="h-4 w-4 animate-spin" /><Upload v-else class="h-4 w-4" />
+              {{ contextData?.source_name ? $t('aiContexts.replaceFile', 'Replace with a file') : $t('aiContexts.uploadFile', 'Upload PDF / TXT') }}
+            </Button>
+            <span class="text-xs text-muted-foreground">{{ $t('aiContexts.or', 'or') }}</span>
+            <Input v-model="knowledgeUrl" type="url" class="h-8 min-w-[220px] flex-1" placeholder="https://yourwebsite.com/faq" @keydown.enter.prevent="readWebsite" />
+            <Button variant="outline" size="sm" :disabled="isIngesting || !knowledgeUrl.trim()" @click="readWebsite">
+              <Globe class="h-4 w-4" />{{ $t('aiContexts.readWebsite', 'Read website') }}
+            </Button>
+          </div>
+          <p class="text-xs text-muted-foreground">{{ $t('aiContexts.knowledgeLimits', 'Up to 10 MB. Scanned PDFs without selectable text cannot be read. Adding a new source replaces the old one.') }}</p>
+        </template>
       </CardContent>
     </Card>
 

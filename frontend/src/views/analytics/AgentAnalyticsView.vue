@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { agentAnalyticsService } from '@/services/api'
+import { agentAnalyticsService, engagementService, type CSATAnalytics } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useUsersStore } from '@/stores/users'
 import { PageHeader, ErrorState, DateRangePicker } from '@/components/shared'
@@ -126,6 +126,9 @@ const fetchAgents = async () => {
   }
 }
 
+const csat = ref<CSATAnalytics | null>(null)
+const csatScore = (v: number) => (v ? v.toFixed(1) : '—')
+
 const fetchAnalytics = async () => {
   isLoading.value = true
   error.value = null
@@ -135,9 +138,13 @@ const fetchAnalytics = async () => {
     if (isAdminOrManager.value && selectedAgentId.value !== 'all') {
       params.agent_id = selectedAgentId.value
     }
-    const response = await agentAnalyticsService.getSummary(params)
+    const [response, csatRes] = await Promise.all([
+      agentAnalyticsService.getSummary(params),
+      engagementService.csat({ from, to }).catch(() => null),
+    ])
     const data = response.data.data || response.data
     analytics.value = data
+    csat.value = csatRes?.data.data ?? null
   } catch (err) {
     console.error('Failed to load agent analytics:', err)
     error.value = t('agentAnalytics.errorLoadingAnalytics')
@@ -490,6 +497,45 @@ void _displayStats.value // Suppress unused warning
             </div>
           </template>
         </div>
+
+        <!-- Customer satisfaction (CSAT surveys sent when chats are closed) -->
+        <Card v-if="!error && csat && csat.sent > 0">
+          <CardHeader>
+            <CardTitle>{{ $t('engagement.csatReportTitle') }}</CardTitle>
+            <CardDescription>{{ $t('engagement.csatReportDesc', { sent: csat.sent, rate: Math.round(csat.response_rate * 100) }) }}</CardDescription>
+          </CardHeader>
+          <CardContent class="grid gap-6 md:grid-cols-2">
+            <div class="flex items-center gap-6">
+              <div>
+                <p class="text-3xl font-semibold tabular-nums">{{ csatScore(csat.average) }}<span class="text-base text-muted-foreground"> / 5</span></p>
+                <p class="text-xs text-muted-foreground">{{ $t('engagement.csatAverage') }}</p>
+              </div>
+              <div class="flex-1 space-y-1.5 text-sm">
+                <div v-for="row in [
+                  { label: $t('engagement.csatGreat'), n: csat.positive, cls: 'bg-emerald-500' },
+                  { label: $t('engagement.csatOkay'), n: csat.neutral, cls: 'bg-amber-400' },
+                  { label: $t('engagement.csatPoor'), n: csat.negative, cls: 'bg-red-500' },
+                ]" :key="row.label" class="flex items-center gap-2">
+                  <span class="w-14 text-muted-foreground">{{ row.label }}</span>
+                  <div class="h-2 flex-1 rounded-full bg-white/[0.06] light:bg-gray-100 overflow-hidden">
+                    <div :class="['h-full rounded-full', row.cls]" :style="{ width: (csat.responded ? (row.n / csat.responded) * 100 : 0) + '%' }" />
+                  </div>
+                  <span class="w-8 text-right tabular-nums">{{ row.n }}</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p class="mb-2 text-xs font-medium text-muted-foreground">{{ $t('engagement.csatByAgent') }}</p>
+              <p v-if="!csat.agents.length" class="text-sm text-muted-foreground">{{ $t('engagement.csatNoAnswers') }}</p>
+              <ul v-else class="space-y-1.5 text-sm">
+                <li v-for="a in csat.agents" :key="a.agent_id || 'none'" class="flex items-center justify-between gap-3">
+                  <span class="truncate">{{ a.agent_name || $t('engagement.csatUnassigned') }}</span>
+                  <span class="tabular-nums text-muted-foreground">{{ csatScore(a.average) }} · {{ a.responses }}</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
 
         <!-- Charts Row -->
         <div v-if="!error" class="grid gap-4 md:grid-cols-2">

@@ -88,6 +88,8 @@ import {
   Code,
   RotateCw,
   RotateCcw,
+  Sparkles,
+  Ban,
   Filter,
   StickyNote,
   Lock,
@@ -1171,6 +1173,64 @@ function replyToMessage(message: Message) {
   })
 }
 
+// Show the customer "typing…" while an agent writes; WhatsApp keeps the bubble
+// for ~25s, so one ping every 20s of activity is enough.
+let lastTypingPing = 0
+watch(messageInput, (val, old) => {
+  const contact = contactsStore.currentContact
+  if (!contact || !val || val.length <= (old?.length ?? 0) || isServiceWindowExpired.value) return
+  const now = Date.now()
+  if (now - lastTypingPing < 20000) return
+  lastTypingPing = now
+  contactsService.typing(contact.id).catch(() => { /* best effort */ })
+})
+
+// AI copilot
+const copilotBusy = ref<string | null>(null)
+const copilotSummary = ref('')
+async function runCopilot(action: 'suggest' | 'improve' | 'translate' | 'summarize', language?: string) {
+  const contact = contactsStore.currentContact
+  if (!contact || copilotBusy.value) return
+  copilotBusy.value = action
+  try {
+    const res = await contactsService.copilot(contact.id, { action, draft: messageInput.value, language })
+    const text = res.data.data.text
+    if (action === 'summarize') {
+      copilotSummary.value = text
+    } else {
+      messageInput.value = text
+      nextTick(() => { autoResizeTextarea(); messageInputRef.value?.focus() })
+    }
+  } catch (e) {
+    toast.error(getErrorMessage(e, t('chat.copilotFailed', 'AI assist is not available right now')))
+  } finally {
+    copilotBusy.value = null
+  }
+}
+
+// Block / unblock the open contact
+const isUpdatingBlock = ref(false)
+async function setBlocked(blocked: boolean) {
+  const contact = contactsStore.currentContact
+  if (!contact || isUpdatingBlock.value) return
+  isUpdatingBlock.value = true
+  try {
+    await contactsService.block(contact.id, blocked)
+    contact.is_blocked = blocked
+    if (blocked) {
+      contact.bot_paused = true
+      contact.conversation_status = 'closed'
+    }
+    const inList = contactsStore.contacts.find(c => c.id === contact.id)
+    if (inList) Object.assign(inList, { is_blocked: contact.is_blocked, bot_paused: contact.bot_paused, conversation_status: contact.conversation_status })
+    toast.success(blocked ? t('chat.contactBlocked', 'Contact blocked') : t('chat.contactUnblocked', 'Contact unblocked'))
+  } catch (e) {
+    toast.error(getErrorMessage(e, t('chat.blockFailed', 'Could not update this contact')))
+  } finally {
+    isUpdatingBlock.value = false
+  }
+}
+
 // Watch for slash commands in message input
 watch(messageInput, (val) => {
   if (val.startsWith('/')) {
@@ -1980,6 +2040,8 @@ async function sendMediaMessage() {
                 <span v-if="isChatClosed" class="wa-tag">{{ $t('chat.statusClosed', 'Closed') }}</span>
                 <span v-if="activeTransferId" class="wa-tag wa-tag-warn">{{ $t('chat.withAgent', 'With agent') }}</span>
                 <span v-else-if="isBotPaused" class="wa-tag wa-tag-warn">{{ $t('chat.botOff', 'Bot off') }}</span>
+                <span v-if="contactsStore.currentContact.ad_headline" class="wa-tag" :title="contactsStore.currentContact.ad_headline">{{ $t('chat.fromAd', 'From ad') }}</span>
+                <span v-if="contactsStore.currentContact.is_blocked" class="wa-tag wa-tag-danger">{{ $t('chat.blocked', 'Blocked') }}</span>
                 <span v-if="contactsStore.currentContact?.marketing_opt_out" class="wa-tag wa-tag-danger">{{ $t('chat.marketingOptOut', 'Marketing Opt-out') }}</span>
               </div>
               <p class="text-[13px] wa-subtle truncate">
@@ -2110,6 +2172,15 @@ async function sendMediaMessage() {
                 >
                   <CheckCircle2 class="mr-2 h-4 w-4" />
                   <span>{{ contactsStore.currentContact.conversation_status === 'closed' ? $t('chat.reopenChat', 'Reopen chat') : $t('chat.closeChat', 'Close chat') }}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  v-if="canWriteContacts"
+                  :disabled="isUpdatingBlock"
+                  :class="contactsStore.currentContact.is_blocked ? undefined : 'text-destructive focus:text-destructive'"
+                  @click="setBlocked(!contactsStore.currentContact.is_blocked)"
+                >
+                  <Ban class="mr-2 h-4 w-4" />
+                  <span>{{ contactsStore.currentContact.is_blocked ? $t('chat.unblockContact', 'Unblock contact') : $t('chat.blockContact', 'Block contact') }}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem :disabled="isUpdatingConversation" @click="setConversation({ bot_paused: !contactsStore.currentContact.bot_paused })">
                   <component :is="contactsStore.currentContact.bot_paused ? Bot : PowerOff" class="mr-2 h-4 w-4" />
@@ -2576,8 +2647,16 @@ async function sendMediaMessage() {
         </ScrollArea>
         </div>
 
+        <!-- Blocked: nothing can be sent until unblocked -->
+        <div v-if="contactsStore.currentContact.is_blocked" class="wa-composer px-4 py-4 flex flex-col items-center gap-2 text-center">
+          <p class="text-sm wa-subtle">{{ $t('chat.blockedNotice', 'You blocked this contact. Their messages are not delivered to the inbox.') }}</p>
+          <Button v-if="canWriteContacts" type="button" size="sm" variant="outline" :disabled="isUpdatingBlock" @click="setBlocked(false)">
+            {{ $t('chat.unblockContact', 'Unblock contact') }}
+          </Button>
+        </div>
+
         <!-- 24h window closed: only templates can be sent -->
-        <div v-if="isServiceWindowExpired" class="wa-composer px-4 py-3 flex items-center gap-3">
+        <div v-else-if="isServiceWindowExpired" class="wa-composer px-4 py-3 flex items-center gap-3">
           <Lock class="h-5 w-5 wa-subtle shrink-0" />
           <div class="flex-1 flex flex-col items-center gap-1.5">
             <TemplatePicker :selected-account="selectedAccount" align="center" @select-with-params="handleTemplateWithParams">
@@ -2660,6 +2739,31 @@ async function sendMediaMessage() {
               </TooltipTrigger>
               <TooltipContent>{{ $t('chat.sendTemplate') }}</TooltipContent>
             </Tooltip>
+            <!-- AI copilot: drafts land in the message box for the agent to review -->
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <button
+                  type="button"
+                  class="w-10 h-10 rounded-full wa-icon-btn flex items-center justify-center transition-colors"
+                  :aria-label="$t('chat.copilot', 'AI assist')"
+                  :title="$t('chat.copilot', 'AI assist')"
+                  :disabled="!!copilotBusy"
+                >
+                  <Loader2 v-if="copilotBusy" class="w-5 h-5 animate-spin" />
+                  <Sparkles v-else class="w-[22px] h-[22px]" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" class="w-56">
+                <DropdownMenuLabel>{{ $t('chat.copilot', 'AI assist') }}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem @click="runCopilot('suggest')">{{ $t('chat.copilotSuggest', 'Suggest a reply') }}</DropdownMenuItem>
+                <DropdownMenuItem :disabled="!messageInput.trim()" @click="runCopilot('improve')">{{ $t('chat.copilotImprove', 'Improve my message') }}</DropdownMenuItem>
+                <DropdownMenuItem :disabled="!messageInput.trim()" @click="runCopilot('translate', 'Hindi')">{{ $t('chat.copilotToHindi', 'Translate to Hindi') }}</DropdownMenuItem>
+                <DropdownMenuItem :disabled="!messageInput.trim()" @click="runCopilot('translate', 'English')">{{ $t('chat.copilotToEnglish', 'Translate to English') }}</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem @click="runCopilot('summarize')">{{ $t('chat.copilotSummarize', 'Summarise this chat') }}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Tooltip>
               <TooltipTrigger as-child>
                 <button type="button" class="w-10 h-10 rounded-full wa-icon-btn flex items-center justify-center transition-colors" @click="openFilePicker">
@@ -2973,6 +3077,16 @@ async function sendMediaMessage() {
 
     <!-- Add Contact Dialog -->
     <CreateContactDialog v-model:open="isAddContactOpen" @created="onContactCreated" />
+
+    <!-- AI chat summary -->
+    <Dialog :open="!!copilotSummary" @update:open="(o: boolean) => { if (!o) copilotSummary = '' }">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{{ $t('chat.copilotSummaryTitle', 'Chat summary') }}</DialogTitle>
+        </DialogHeader>
+        <p class="whitespace-pre-line text-sm leading-relaxed">{{ copilotSummary }}</p>
+      </DialogContent>
+    </Dialog>
 
     <!-- In-app media viewer (lightbox) -->
     <MediaViewerDialog

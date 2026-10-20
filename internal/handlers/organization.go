@@ -360,7 +360,7 @@ func (a *App) ListOrganizations(r *fastglue.Request) error {
 			ID:        org.ID,
 			Name:      org.Name,
 			Slug:      org.Slug,
-			CreatedAt: org.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			CreatedAt: org.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 		}
 	}
 
@@ -385,7 +385,7 @@ func (a *App) GetCurrentOrganization(r *fastglue.Request) error {
 		ID:        org.ID,
 		Name:      org.Name,
 		Slug:      org.Slug,
-		CreatedAt: org.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt: org.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	})
 }
 
@@ -489,7 +489,7 @@ func (a *App) CreateOrganization(r *fastglue.Request) error {
 		ID:        org.ID,
 		Name:      org.Name,
 		Slug:      org.Slug,
-		CreatedAt: org.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt: org.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	})
 }
 

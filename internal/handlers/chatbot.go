@@ -94,6 +94,9 @@ type AIContextResponse struct {
 	TriggerKeywords []string           `json:"trigger_keywords"`
 	StaticContent   string             `json:"static_content"`
 	ApiConfig       models.JSONB       `json:"api_config,omitempty"`
+	SourceName      string             `json:"source_name,omitempty"`
+	SourceType      string             `json:"source_type,omitempty"`
+	SourceChars     int                `json:"source_chars"`
 	Enabled         bool               `json:"enabled"`
 	Priority        int                `json:"priority"`
 	CreatedByName   string             `json:"created_by_name,omitempty"`
@@ -1133,6 +1136,9 @@ func (a *App) ListAIContexts(r *fastglue.Request) error {
 			TriggerKeywords: ctx.TriggerKeywords,
 			StaticContent:   ctx.StaticContent,
 			ApiConfig:       ctx.ApiConfig,
+			SourceName:      ctx.SourceName,
+			SourceType:      ctx.SourceType,
+			SourceChars:     ctx.SourceChars,
 			Enabled:         ctx.IsEnabled,
 			Priority:        ctx.Priority,
 			CreatedAt:       ctx.CreatedAt.Format(time.RFC3339),
@@ -1234,6 +1240,9 @@ func (a *App) GetAIContext(r *fastglue.Request) error {
 		TriggerKeywords: aiCtx.TriggerKeywords,
 		StaticContent:   aiCtx.StaticContent,
 		ApiConfig:       aiCtx.ApiConfig,
+		SourceName:      aiCtx.SourceName,
+		SourceType:      aiCtx.SourceType,
+		SourceChars:     aiCtx.SourceChars,
 		Enabled:         aiCtx.IsEnabled,
 		Priority:        aiCtx.Priority,
 		CreatedAt:       aiCtx.CreatedAt.Format(time.RFC3339),

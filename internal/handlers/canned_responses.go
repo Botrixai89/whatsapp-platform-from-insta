@@ -317,8 +317,8 @@ func cannedResponseToResponse(cr models.CannedResponse) CannedResponseResponse {
 		IsActive:   cr.IsActive,
 		UsageCount: cr.UsageCount,
 		Buttons:    jsonbArrayToButtons(cr.Buttons),
-		CreatedAt:  cr.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:  cr.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:  cr.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:  cr.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }
 

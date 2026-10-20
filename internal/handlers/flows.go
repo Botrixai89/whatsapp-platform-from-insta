@@ -1070,7 +1070,7 @@ func flowToResponse(f models.WhatsAppFlow) FlowResponse {
 		Screens:         []any(f.Screens),
 		PreviewURL:      f.PreviewURL,
 		HasLocalChanges: f.HasLocalChanges,
-		CreatedAt:       f.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:       f.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:       f.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:       f.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }

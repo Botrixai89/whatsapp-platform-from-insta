@@ -30,6 +30,7 @@ type Config struct {
 	Calling      CallingConfig      `koanf:"calling"`
 	TTS          TTSConfig          `koanf:"tts"`
 	Billing      BillingConfig      `koanf:"billing"`
+	Payments     PaymentsConfig     `koanf:"payments"`
 }
 
 // BillingConfig controls the prepaid wallet that is debited per billable
@@ -38,6 +39,15 @@ type BillingConfig struct {
 	Enabled             bool    `koanf:"enabled"`               // master switch for wallet checks and deductions
 	Currency            string  `koanf:"currency"`              // wallet currency code (e.g. INR, USD)
 	LowBalanceThreshold float64 `koanf:"low_balance_threshold"` // default low-balance alert level for new wallets
+}
+
+// PaymentsConfig enables self-serve wallet recharge through Razorpay.
+type PaymentsConfig struct {
+	RazorpayKeyID         string  `koanf:"razorpay_key_id"`
+	RazorpayKeySecret     string  `koanf:"razorpay_key_secret"`
+	RazorpayWebhookSecret string  `koanf:"razorpay_webhook_secret"`
+	MinRecharge           float64 `koanf:"min_recharge"` // smallest top-up in wallet currency (default 100)
+	MaxRecharge           float64 `koanf:"max_recharge"` // largest single top-up (default 200000)
 }
 
 type TTSConfig struct {
@@ -121,6 +131,7 @@ type ServerConfig struct {
 	WriteTimeout   int    `koanf:"write_timeout"`
 	BasePath       string `koanf:"base_path"`       // Base path for frontend (e.g., "/botrixai" for proxy pass)
 	AllowedOrigins string `koanf:"allowed_origins"` // Comma-separated list of allowed CORS origins
+	PublicURL      string `koanf:"public_url"`      // Public HTTPS address of this server (e.g. https://app.example.com); used for provider webhooks
 }
 
 type DatabaseConfig struct {

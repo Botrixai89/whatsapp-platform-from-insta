@@ -146,6 +146,9 @@ func SLASendOptions() MessageSendOptions {
 // It handles: text, media (image/video/audio/document), interactive (buttons/list/cta_url), and template messages.
 func (a *App) SendOutgoingMessage(ctx context.Context, req OutgoingMessageRequest, opts MessageSendOptions) (*models.Message, error) {
 	// 0. Wallet / plan checks (suspension, plan expiry, limits, balance)
+	if req.Contact != nil && req.Contact.IsBlocked {
+		return nil, ErrContactBlocked
+	}
 	if req.Account != nil && req.Contact != nil {
 		if err := a.Billing.CheckCanSend(req.Account.OrganizationID, req.Contact.PhoneNumber, templateCategory(req)); err != nil {
 			return nil, err

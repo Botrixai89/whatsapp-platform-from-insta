@@ -10,7 +10,8 @@ import { PageHeader, DataTable, type Column } from '@/components/shared'
 import TransactionsTable from '@/views/admin/TransactionsTable.vue'
 import WalletAdjustDialog from '@/views/admin/WalletAdjustDialog.vue'
 import { useAuthStore } from '@/stores/auth'
-import { walletService, type MessageRate } from '@/services/api'
+import { walletService, paymentsService, type MessageRate, type PaymentConfig } from '@/services/api'
+import RechargeDialog from './RechargeDialog.vue'
 import { useWalletStore, formatMoney } from '@/stores/wallet'
 import { formatDate } from '@/lib/utils'
 import { Wallet, AlertTriangle, Ban, RefreshCw, Info, Plus, Minus } from 'lucide-vue-next'
@@ -33,7 +34,15 @@ function openAdjust(type: 'credit' | 'debit') {
 }
 const money = (v: number) => formatMoney(v, walletStore.currency)
 
+const paymentConfig = ref<PaymentConfig | null>(null)
+const showRecharge = ref(false)
+function onPaid() {
+  walletStore.fetch()
+  txTable.value?.reload?.()
+}
+
 onMounted(async () => {
+  paymentsService.config().then(r => { paymentConfig.value = r.data.data }).catch(() => { paymentConfig.value = null })
   walletStore.fetch()
   try {
     rates.value = (await walletService.rates()).data.data.rates || []
@@ -95,6 +104,9 @@ const rateColumns = computed<Column<MessageRate>[]>(() => [
                 <Button size="sm" class="flex-1" @click="openAdjust('credit')"><Plus class="h-4 w-4 mr-1" />{{ $t('owner.addFunds') }}</Button>
                 <Button size="sm" variant="outline" class="flex-1" @click="openAdjust('debit')"><Minus class="h-4 w-4 mr-1" />{{ $t('owner.deduct') }}</Button>
               </div>
+              <Button v-else-if="paymentConfig?.enabled" size="sm" class="w-full" @click="showRecharge = true">
+                <Plus class="h-4 w-4" />{{ $t('wallet.addMoney') }}
+              </Button>
               <div v-else class="flex gap-2 rounded-md bg-white/[0.04] light:bg-gray-50 p-3 text-xs text-muted-foreground">
                 <Info class="h-4 w-4 shrink-0" />{{ $t('wallet.rechargeHint') }}
               </div>
@@ -173,5 +185,6 @@ const rateColumns = computed<Column<MessageRate>[]>(() => [
       :currency="walletStore.currency"
       @done="refresh"
     />
+    <RechargeDialog v-if="paymentConfig?.enabled" v-model:open="showRecharge" :config="paymentConfig" @paid="onPaid" />
   </div>
 </template>

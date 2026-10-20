@@ -169,6 +169,8 @@ type ContextType string
 const (
 	ContextTypeStatic ContextType = "static"
 	ContextTypeAPI    ContextType = "api"
+	// ContextTypeKnowledge answers from an uploaded document or a website, chunked for retrieval
+	ContextTypeKnowledge ContextType = "knowledge"
 )
 
 // InputType represents chatbot flow step input types

@@ -421,6 +421,13 @@ func (s *Service) Adjust(orgID uuid.UUID, amount float64, source, description st
 	return entry, change, err
 }
 
+// CreditInTx credits a wallet inside the caller's transaction, so the credit
+// commits or rolls back together with the caller's own bookkeeping (e.g.
+// marking a payment order paid exactly once).
+func (s *Service) CreditInTx(tx *gorm.DB, orgID uuid.UUID, amount float64, source, reference, description string) (*models.WalletTransaction, *Change, error) {
+	return s.move(tx, orgID, amount, source, "", reference, description, nil)
+}
+
 // ChargeOnSend debits the expected price of a message that Meta just
 // accepted. It is a no-op if the message was already settled by a webhook.
 func (s *Service) ChargeOnSend(orgID uuid.UUID, wamid, phone, category string) (*Change, error) {

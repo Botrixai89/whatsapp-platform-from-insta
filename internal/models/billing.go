@@ -131,3 +131,26 @@ type MessageRate struct {
 func (MessageRate) TableName() string {
 	return "message_rates"
 }
+
+// Payment order states
+const (
+	PaymentCreated = "created"
+	PaymentPaid    = "paid"
+	PaymentFailed  = "failed"
+)
+
+// PaymentOrder is a self-serve wallet recharge through the payment gateway.
+type PaymentOrder struct {
+	BaseModel
+	OrganizationID uuid.UUID  `gorm:"type:uuid;index;not null" json:"organization_id"`
+	UserID         *uuid.UUID `gorm:"type:uuid" json:"user_id,omitempty"`
+	Gateway        string     `gorm:"size:20;not null;default:'razorpay'" json:"gateway"`
+	GatewayOrderID string     `gorm:"size:100;uniqueIndex;not null" json:"gateway_order_id"`
+	PaymentID      string     `gorm:"size:100" json:"payment_id,omitempty"`
+	Amount         float64    `gorm:"type:decimal(14,4);not null" json:"amount"`
+	Currency       string     `gorm:"size:10;not null" json:"currency"`
+	Status         string     `gorm:"size:20;index;not null;default:'created'" json:"status"`
+	PaidAt         *time.Time `json:"paid_at,omitempty"`
+}
+
+func (PaymentOrder) TableName() string { return "payment_orders" }

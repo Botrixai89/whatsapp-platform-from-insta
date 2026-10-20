@@ -16,6 +16,8 @@ export function useSearchPagination(options: UseSearchPaginationOptions) {
   const searchQuery = ref('')
   const currentPage = ref(1)
   const totalItems = ref(0)
+  // Adjustable page size for views that offer a rows-per-page picker
+  const perPage = ref(pageSize)
 
   const debouncedSearch = useDebounceFn(() => {
     currentPage.value = 1
@@ -35,7 +37,15 @@ export function useSearchPagination(options: UseSearchPaginationOptions) {
     fetchFn()
   }
 
+  function setPageSize(size: number) {
+    perPage.value = size
+    currentPage.value = 1
+    fetchFn()
+  }
+
   return {
+    perPage,
+    setPageSize,
     searchQuery,
     currentPage,
     totalItems,

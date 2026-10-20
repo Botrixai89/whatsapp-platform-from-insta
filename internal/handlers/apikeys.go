@@ -85,7 +85,7 @@ func (a *App) ListAPIKeys(r *fastglue.Request) error {
 			LastUsedAt: key.LastUsedAt,
 			ExpiresAt:  key.ExpiresAt,
 			IsActive:   key.IsActive,
-			CreatedAt:  key.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			CreatedAt:  key.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 		}
 	}
 
@@ -116,7 +116,7 @@ func (a *App) GetAPIKey(r *fastglue.Request) error {
 		LastUsedAt: apiKey.LastUsedAt,
 		ExpiresAt:  apiKey.ExpiresAt,
 		IsActive:   apiKey.IsActive,
-		CreatedAt:  apiKey.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:  apiKey.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	})
 }
 
@@ -160,7 +160,7 @@ func (a *App) UpdateAPIKey(r *fastglue.Request) error {
 		LastUsedAt: apiKey.LastUsedAt,
 		ExpiresAt:  apiKey.ExpiresAt,
 		IsActive:   apiKey.IsActive,
-		CreatedAt:  apiKey.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:  apiKey.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	})
 }
 
@@ -230,7 +230,7 @@ func (a *App) CreateAPIKey(r *fastglue.Request) error {
 		Key:       fullKey, // This is the only time the full key is returned
 		KeyPrefix: apiKey.KeyPrefix,
 		ExpiresAt: apiKey.ExpiresAt,
-		CreatedAt: apiKey.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt: apiKey.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	})
 }
 

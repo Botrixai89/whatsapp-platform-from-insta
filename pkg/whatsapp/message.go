@@ -679,3 +679,16 @@ func (c *Client) SendTemplateMessage(ctx context.Context, account *Account, rcpt
 	c.Log.Info("Template message sent", "message_id", messageID, "phone", rcpt.Phone, "template", templateName)
 	return messageID, nil
 }
+
+// SendTypingIndicator marks the customer's message as read and shows a typing
+// bubble (up to ~25 seconds, or until the next message is sent).
+func (c *Client) SendTypingIndicator(ctx context.Context, account *Account, messageID string) error {
+	payload := map[string]any{
+		"messaging_product": "whatsapp",
+		"status":            "read",
+		"message_id":        messageID,
+		"typing_indicator":  map[string]string{"type": "text"},
+	}
+	_, err := c.doRequest(ctx, "POST", c.buildMessagesURL(account), payload, account.AccessToken)
+	return err
+}

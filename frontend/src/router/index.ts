@@ -121,6 +121,18 @@ const router = createRouter({
           meta: { permission: 'templates' }
         },
         {
+          path: 'sequences',
+          name: 'sequences',
+          component: () => import('@/views/sequences/SequencesView.vue'),
+          meta: { permission: 'campaigns' }
+        },
+        {
+          path: 'growth',
+          name: 'growth-tools',
+          component: () => import('@/views/growth/GrowthToolsView.vue'),
+          meta: { permission: 'campaigns' }
+        },
+        {
           path: 'flows',
           name: 'flows',
           component: () => import('@/views/settings/FlowsView.vue'),

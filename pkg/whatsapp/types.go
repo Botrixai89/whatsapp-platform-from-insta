@@ -12,7 +12,10 @@ type Account struct {
 	BusinessID  string
 	AppID       string
 	APIVersion  string
-	AccessToken string
+	AccessToken string // Meta access token, or the provider API key for Heltar accounts
+	// Provider is "" or ProviderMeta for Meta's Graph API, ProviderHeltar for a Heltar-compatible API
+	Provider    string
+	ProviderURL string // Heltar API base URL; defaults to DefaultHeltarURL
 }
 
 // Button represents an interactive button

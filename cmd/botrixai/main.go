@@ -279,6 +279,11 @@ func runServer(args []string) {
 	}()
 
 	// Start SLA processor (runs every minute)
+	// Scheduled campaigns and drip sequence steps
+	automation := handlers.NewAutomationProcessor(app, 30*time.Second)
+	automationCtx, automationCancel := context.WithCancel(context.Background())
+	go automation.Start(automationCtx)
+
 	slaProcessor := handlers.NewSLAProcessor(app, time.Minute)
 	slaCtx, slaCancel := context.WithCancel(context.Background())
 	go slaProcessor.Start(slaCtx)
@@ -329,6 +334,8 @@ func runServer(args []string) {
 	lo.Info("Stopping SLA processor...")
 	slaCancel()
 	slaProcessor.Stop()
+	automationCancel()
+	automation.Stop()
 	lo.Info("SLA processor stopped")
 
 	// Stop workers first
@@ -507,6 +514,7 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	// Webhook routes (public - for Meta)
 	g.GET("/api/webhook", app.WebhookVerify)
 	g.POST("/api/webhook", app.WebhookHandler)
+	g.POST("/api/webhook/provider/{id}", app.ProviderWebhook) // BotrixAI API (Heltar) forwarded webhooks
 
 	// WebSocket route (auth via message-based flow after upgrade)
 	g.GET("/ws", app.WebSocketHandler)
@@ -523,6 +531,10 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 		if path == "/health" || path == "/ready" ||
 			path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/auth/refresh" ||
 			path == "/api/auth/logout" || path == "/api/webhook" || path == "/ws" {
+			return r
+		}
+		// Provider webhooks authenticate with a per-account shared secret
+		if (len(path) > 22 && path[:22] == "/api/webhook/provider/") || (len(path) > 3 && path[:3] == "/l/") || path == "/api/webhook/razorpay" {
 			return r
 		}
 		// Skip auth for SSO routes (they handle their own auth via state tokens)
@@ -640,7 +652,8 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	// Accounts
 	g.GET("/api/accounts", app.ListAccounts)
 	g.POST("/api/accounts", app.CreateAccount)
-	g.POST("/api/accounts/exchange-token", app.ExchangeToken) // Embedded signup
+	g.POST("/api/accounts/exchange-token", app.ExchangeToken)            // Embedded signup
+	g.POST("/api/accounts/connect-provider", app.ConnectProviderAccount) // BotrixAI API (Heltar) number
 	g.GET("/api/accounts/{id}", app.GetAccount)
 	g.PUT("/api/accounts/{id}", app.UpdateAccount)
 	g.DELETE("/api/accounts/{id}", app.DeleteAccount)
@@ -659,6 +672,21 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	g.DELETE("/api/contacts/{id}", app.DeleteContact)
 	g.PUT("/api/contacts/{id}/assign", app.AssignContact)
 	g.PUT("/api/contacts/{id}/conversation", app.UpdateConversation)
+	g.PUT("/api/contacts/{id}/block", app.BlockContact)
+	g.POST("/api/contacts/{id}/typing", app.SendTypingIndicator)
+	g.POST("/api/contacts/{id}/copilot", app.Copilot)
+	g.GET("/api/engagement/settings", app.GetEngagementSettings)
+	g.PUT("/api/engagement/settings", app.UpdateEngagementSettings)
+	g.GET("/api/analytics/csat", app.GetCSATAnalytics)
+	g.GET("/api/analytics/ads", app.GetAdAnalytics)
+	g.GET("/api/links", app.ListTrackedLinks)
+	g.POST("/api/links", app.CreateTrackedLink)
+	g.DELETE("/api/links/{id}", app.DeleteTrackedLink)
+	g.GET("/l/{code}", app.RedirectTrackedLink) // public short links
+	g.GET("/api/wallet/recharge/config", app.GetPaymentConfig)
+	g.POST("/api/wallet/recharge/order", app.CreateRechargeOrder)
+	g.POST("/api/wallet/recharge/verify", app.VerifyRecharge)
+	g.POST("/api/webhook/razorpay", app.RazorpayWebhook) // signed by Razorpay
 	g.PUT("/api/contacts/{id}/tags", app.UpdateContactTags)
 	g.GET("/api/contacts/{id}/session-data", app.GetContactSessionData)
 
@@ -723,6 +751,7 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 
 	// Bulk Campaigns
 	g.GET("/api/campaigns", app.ListCampaigns)
+	g.GET("/api/campaigns/logs", app.ListCampaignLogs)
 	g.POST("/api/campaigns", app.CreateCampaign)
 	g.GET("/api/campaigns/{id}", app.GetCampaign)
 	g.PUT("/api/campaigns/{id}", app.UpdateCampaign)
@@ -731,6 +760,15 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	g.POST("/api/campaigns/{id}/pause", app.PauseCampaign)
 	g.POST("/api/campaigns/{id}/cancel", app.CancelCampaign)
 	g.POST("/api/campaigns/{id}/retry-failed", app.RetryFailed)
+	g.POST("/api/campaigns/{id}/retarget", app.RetargetCampaign)
+	g.PUT("/api/campaigns/{id}/schedule", app.ScheduleCampaign)
+	g.GET("/api/sequences", app.ListSequences)
+	g.POST("/api/sequences", app.CreateSequence)
+	g.PUT("/api/sequences/{id}", app.UpdateSequence)
+	g.DELETE("/api/sequences/{id}", app.DeleteSequence)
+	g.POST("/api/sequences/{id}/enroll", app.EnrollInSequence)
+	g.GET("/api/sequences/{id}/enrollments", app.ListSequenceEnrollments)
+	g.POST("/api/sequences/{id}/enrollments/{enrollmentId}/stop", app.StopSequenceEnrollment)
 	g.GET("/api/campaigns/{id}/progress", app.GetCampaign)
 	g.POST("/api/campaigns/{id}/recipients/import", app.ImportRecipients)
 	g.GET("/api/campaigns/{id}/recipients", app.GetCampaignRecipients)
@@ -762,6 +800,7 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	g.GET("/api/chatbot/ai-contexts/{id}", app.GetAIContext)
 	g.PUT("/api/chatbot/ai-contexts/{id}", app.UpdateAIContext)
 	g.DELETE("/api/chatbot/ai-contexts/{id}", app.DeleteAIContext)
+	g.POST("/api/chatbot/ai-contexts/{id}/knowledge", app.UploadKnowledge)
 
 	// Agent Transfers
 	g.GET("/api/chatbot/transfers", app.ListAgentTransfers)

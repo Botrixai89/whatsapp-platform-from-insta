@@ -86,12 +86,18 @@ func (a *App) ListTemplates(r *fastglue.Request) error {
 	if search != "" {
 		query = query.Where("name ILIKE ? OR display_name ILIKE ?", "%"+search+"%", "%"+search+"%")
 	}
+	if from, ok := parseDateParam(r, "from"); ok {
+		query = query.Where("updated_at >= ?", from)
+	}
+	if to, ok := parseDateParam(r, "to"); ok {
+		query = query.Where("updated_at <= ?", endOfDay(to))
+	}
 
 	var total int64
 	query.Model(&models.Template{}).Count(&total)
 
 	var templates []models.Template
-	if err := pg.Apply(query.Order("created_at DESC")).
+	if err := pg.Apply(query.Order("updated_at DESC")).
 		Find(&templates).Error; err != nil {
 		a.Log.Error("Failed to list templates", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to list templates", nil, "")
@@ -606,8 +612,8 @@ func templateToResponse(t models.Template) TemplateResponse {
 		SampleValues:              convertFromJSONBArray(t.SampleValues),
 		AddSecurityRecommendation: t.AddSecurityRecommendation,
 		CodeExpirationMinutes:     t.CodeExpirationMinutes,
-		CreatedAt:                 t.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:                 t.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:                 t.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:                 t.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }
 

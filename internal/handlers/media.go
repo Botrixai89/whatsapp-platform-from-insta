@@ -88,6 +88,15 @@ func getExtensionFromMimeType(mimeType string) string {
 	}
 }
 
+// mediaRef is what GetMediaURL needs to find an incoming file: Meta's media ID,
+// or the message's wamid for provider accounts (the provider indexes by message).
+func mediaRef(account *whatsapp.Account, wamid, mediaID string) string {
+	if account.IsHeltar() {
+		return wamid
+	}
+	return mediaID
+}
+
 // DownloadAndSaveMedia downloads media from Meta and saves it locally
 // Returns the local file path (relative to media storage) or error
 func (a *App) DownloadAndSaveMedia(ctx context.Context, mediaID string, mimeType string, account *whatsapp.Account) (string, error) {
@@ -97,8 +106,12 @@ func (a *App) DownloadAndSaveMedia(ctx context.Context, mediaID string, mimeType
 		return "", fmt.Errorf("failed to get media URL: %w", err)
 	}
 
-	// Download the media content
-	data, err := a.WhatsApp.DownloadMedia(ctx, mediaURL, account.AccessToken)
+	// Download the media content (provider CDN links are public; Meta's need the token)
+	token := account.AccessToken
+	if account.IsHeltar() {
+		token = ""
+	}
+	data, err := a.WhatsApp.DownloadMedia(ctx, mediaURL, token)
 	if err != nil {
 		return "", fmt.Errorf("failed to download media: %w", err)
 	}

@@ -27,7 +27,9 @@ import {
   Package,
   Receipt,
   Wallet,
-  IndianRupee
+  IndianRupee,
+  Rocket,
+  Repeat
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 
@@ -123,6 +125,18 @@ export const navigationSections: NavSection[] = [
         path: '/flows',
         icon: Workflow,
         permission: 'flows.whatsapp'
+      },
+      {
+        name: 'nav.sequences',
+        path: '/sequences',
+        icon: Repeat,
+        permission: 'campaigns'
+      },
+      {
+        name: 'nav.growthTools',
+        path: '/growth',
+        icon: Rocket,
+        permission: 'campaigns'
       },
     ]
   },

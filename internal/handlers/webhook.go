@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/Botrixai89/botrixai/pkg/whatsapp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -171,29 +172,43 @@ func (a *App) WebhookHandler(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid payload", nil, "")
 	}
 
-	// Verify webhook signature before processing any fields.
-	// Find a phoneNumberID from any change to look up the account's AppSecret.
-	if len(signature) > 0 {
-		for _, entry := range payload.Entry {
-			for _, change := range entry.Changes {
-				phoneNumberID := change.Value.Metadata.PhoneNumberID
-				if phoneNumberID == "" {
-					continue
-				}
-				account, err := a.getWhatsAppAccountCached(phoneNumberID)
-				if err != nil || account.AppSecret == "" {
-					continue
-				}
-				if !verifyWebhookSignature(body, signature, []byte(account.AppSecret)) {
-					a.Log.Warn("Invalid webhook signature", "phone_id", phoneNumberID)
-					return r.SendErrorEnvelope(fasthttp.StatusForbidden, "Invalid signature", nil, "")
-				}
-				a.Log.Debug("Webhook signature verified successfully")
-				break
+	// Verify webhook signatures before processing any fields. Every account with an
+	// App Secret must receive signed payloads: a missing or wrong signature naming
+	// such an account is rejected (previously an unsigned request skipped the check).
+	// Accounts connected through a provider API only accept their own endpoint.
+	for _, entry := range payload.Entry {
+		for _, change := range entry.Changes {
+			phoneNumberID := change.Value.Metadata.PhoneNumberID
+			if phoneNumberID == "" {
+				continue
+			}
+			account, err := a.getWhatsAppAccountCached(phoneNumberID)
+			if err != nil {
+				continue
+			}
+			if account.Provider == whatsapp.ProviderHeltar {
+				a.Log.Warn("Rejected Meta webhook for provider-connected account", "phone_id", phoneNumberID)
+				return r.SendErrorEnvelope(fasthttp.StatusForbidden, "Invalid signature", nil, "")
+			}
+			if account.AppSecret == "" {
+				continue
+			}
+			if len(signature) == 0 || !verifyWebhookSignature(body, signature, []byte(account.AppSecret)) {
+				a.Log.Warn("Invalid webhook signature", "phone_id", phoneNumberID)
+				return r.SendErrorEnvelope(fasthttp.StatusForbidden, "Invalid signature", nil, "")
 			}
 		}
 	}
 
+	a.processWebhookPayload(payload)
+
+	// Always respond with 200 to acknowledge receipt
+	return r.SendEnvelope(map[string]string{"status": "ok"})
+}
+
+// processWebhookPayload dispatches every change in a Meta-format webhook. Callers
+// authenticate the payload first (Meta signature, or a provider's shared secret).
+func (a *App) processWebhookPayload(payload WebhookPayload) {
 	// Process each entry
 	for _, entry := range payload.Entry {
 		for _, change := range entry.Changes {
@@ -341,9 +356,6 @@ func (a *App) WebhookHandler(r *fastglue.Request) error {
 			}
 		}
 	}
-
-	// Always respond with 200 to acknowledge receipt
-	return r.SendEnvelope(map[string]string{"status": "ok"})
 }
 
 func (a *App) processIncomingMessage(phoneNumberID string, msg IncomingTextMessage, profileName string) {

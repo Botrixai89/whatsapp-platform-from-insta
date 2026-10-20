@@ -850,8 +850,8 @@ func userToResponse(user models.User) UserResponse {
 		IsSuperAdmin:   user.IsSuperAdmin,
 		OrganizationID: user.OrganizationID,
 		Settings:       user.Settings,
-		CreatedAt:      user.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:      user.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:      user.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:      user.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
 	// Include role info if loaded

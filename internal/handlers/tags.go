@@ -276,7 +276,7 @@ func tagToResponse(tag models.Tag) TagResponse {
 	return TagResponse{
 		Name:      tag.Name,
 		Color:     tag.Color,
-		CreatedAt: tag.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt: tag.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt: tag.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt: tag.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }

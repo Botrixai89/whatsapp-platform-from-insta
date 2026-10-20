@@ -23,11 +23,14 @@ type BulkMessageCampaign struct {
 	DeliveredCount       int            `gorm:"default:0" json:"delivered_count"`
 	ReadCount            int            `gorm:"default:0" json:"read_count"`
 	FailedCount          int            `gorm:"default:0" json:"failed_count"`
-	ScheduledAt          *time.Time     `json:"scheduled_at,omitempty"`
-	StartedAt            *time.Time     `json:"started_at,omitempty"`
-	CompletedAt          *time.Time     `json:"completed_at,omitempty"`
-	CreatedBy            uuid.UUID      `gorm:"type:uuid;not null" json:"created_by"`
-	UpdatedByID          *uuid.UUID     `gorm:"type:uuid" json:"updated_by_id,omitempty"`
+	// TrackLinks swaps URL parameter values for per-recipient short links that count clicks
+	TrackLinks   bool       `gorm:"default:false" json:"track_links"`
+	ClickedCount int        `gorm:"default:0" json:"clicked_count"`
+	ScheduledAt  *time.Time `json:"scheduled_at,omitempty"`
+	StartedAt    *time.Time `json:"started_at,omitempty"`
+	CompletedAt  *time.Time `json:"completed_at,omitempty"`
+	CreatedBy    uuid.UUID  `gorm:"type:uuid;not null" json:"created_by"`
+	UpdatedByID  *uuid.UUID `gorm:"type:uuid" json:"updated_by_id,omitempty"`
 
 	// Relations
 	Organization *Organization          `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`

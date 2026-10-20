@@ -184,8 +184,145 @@ export const apiKeysService = {
   delete: (id: string) => api.delete(`/api-keys/${id}`)
 }
 
+export interface EngagementSettings {
+  opt_out: { enabled: boolean; opt_out_keywords: string[]; opt_in_keywords: string[]; opt_out_reply: string; opt_in_reply: string }
+  csat: { enabled: boolean; question: string; thanks_message: string }
+}
+
+export interface CSATAnalytics {
+  sent: number
+  responded: number
+  response_rate: number
+  average: number
+  positive: number
+  neutral: number
+  negative: number
+  agents: Array<{ agent_id: string | null; agent_name: string; responses: number; average: number }>
+}
+
+export const engagementService = {
+  get: () => api.get<{ data: EngagementSettings }>('/engagement/settings'),
+  update: (data: EngagementSettings) => api.put<{ data: EngagementSettings }>('/engagement/settings', data),
+  csat: (params?: { from?: string; to?: string }) => api.get<{ data: CSATAnalytics }>('/analytics/csat', { params }),
+}
+
+export interface TrackedLink {
+  id: string
+  code: string
+  target_url: string
+  title: string
+  clicks: number
+  first_clicked_at?: string
+  last_clicked_at?: string
+  short_url: string
+  created_at: string
+}
+
+export interface AdLeadRow {
+  source_id: string
+  source_type: string
+  headline: string
+  source_url: string
+  leads: number
+  clicks: number
+  first_at: string
+  last_at: string
+}
+
+export const growthService = {
+  links: () => api.get<{ data: { links: TrackedLink[] } }>('/links'),
+  createLink: (data: { target_url: string; title?: string }) => api.post<{ data: TrackedLink }>('/links', data),
+  deleteLink: (id: string) => api.delete(`/links/${id}`),
+  ads: (params?: { from?: string; to?: string }) => api.get<{ data: { ads: AdLeadRow[]; total_leads: number } }>('/analytics/ads', { params }),
+}
+
+export interface SequenceStep {
+  id?: string
+  position?: number
+  delay_minutes: number
+  template_id: string
+  template_params: Record<string, string>
+}
+
+export interface Sequence {
+  id: string
+  name: string
+  whatsapp_account: string
+  is_active: boolean
+  stop_on_reply: boolean
+  trigger_tag: string
+  steps: SequenceStep[]
+  active: number
+  completed: number
+  stopped: number
+  created_at: string
+}
+
+export interface SequenceInput {
+  name: string
+  whatsapp_account: string
+  is_active: boolean
+  stop_on_reply: boolean
+  trigger_tag: string
+  steps: SequenceStep[]
+}
+
+export interface SequenceEnrollment {
+  id: string
+  status: 'active' | 'completed' | 'stopped'
+  next_step: number
+  next_run_at?: string
+  steps_sent: number
+  stopped_reason?: string
+  last_error?: string
+  created_at: string
+  contact?: { id: string; phone_number: string; profile_name?: string }
+}
+
+export const sequencesService = {
+  list: () => api.get<{ data: { sequences: Sequence[] } }>('/sequences'),
+  create: (data: SequenceInput) => api.post('/sequences', data),
+  update: (id: string, data: SequenceInput) => api.put(`/sequences/${id}`, data),
+  delete: (id: string) => api.delete(`/sequences/${id}`),
+  enroll: (id: string, data: { phones?: string[]; tag?: string; contact_ids?: string[] }) =>
+    api.post<{ data: { enrolled: number; skipped: number } }>(`/sequences/${id}/enroll`, data),
+  enrollments: (id: string) => api.get<{ data: { enrollments: SequenceEnrollment[] } }>(`/sequences/${id}/enrollments`),
+  stopEnrollment: (id: string, enrollmentId: string) => api.post(`/sequences/${id}/enrollments/${enrollmentId}/stop`),
+}
+
+export interface PaymentConfig {
+  enabled: boolean
+  gateway: string
+  key_id: string
+  min_recharge: number
+  max_recharge: number
+  currency: string
+}
+
+export const paymentsService = {
+  config: () => api.get<{ data: PaymentConfig }>('/wallet/recharge/config'),
+  createOrder: (amount: number) => api.post<{ data: {
+    order_id: string; key_id: string; amount: number; currency: string; name: string; business: string
+    description: string; prefill: { name: string; email: string; contact: string }
+  } }>('/wallet/recharge/order', { amount }),
+  verify: (data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) =>
+    api.post<{ data: { status: string; balance: number } }>('/wallet/recharge/verify', data),
+}
+
+export interface ConnectProviderResult {
+  account: { id: string; name: string; phone_id: string; provider: string }
+  webhook_url: string
+  webhook_header: string
+  webhook_secret: string
+  webhook_registered: boolean
+  webhook_error?: string
+}
+
 export const accountsService = {
-  list: () => api.get('/accounts')
+  list: () => api.get('/accounts'),
+  /** Connect a number managed through the BotrixAI API (Heltar white-label) */
+  connectProvider: (data: { name: string; api_url: string; api_key: string; public_url?: string }) =>
+    api.post<{ data: ConnectProviderResult }>('/accounts/connect-provider', data),
 }
 
 export const contactsService = {
@@ -203,6 +340,11 @@ export const contactsService = {
   updateTags: (id: string, tags: string[]) =>
     api.put(`/contacts/${id}/tags`, { tags }),
   getSessionData: (id: string) => api.get(`/contacts/${id}/session-data`),
+  block: (id: string, blocked: boolean) =>
+    api.put<{ data: { is_blocked: boolean } }>(`/contacts/${id}/block`, { blocked }),
+  typing: (id: string) => api.post(`/contacts/${id}/typing`),
+  copilot: (id: string, data: { action: string; draft?: string; language?: string }) =>
+    api.post<{ data: { action: string; text: string } }>(`/contacts/${id}/copilot`, data),
   updateConversation: (id: string, data: { status?: 'open' | 'closed'; bot_paused?: boolean }) =>
     api.put<{ data: { conversation_status: 'open' | 'closed'; bot_paused: boolean } }>(`/contacts/${id}/conversation`, data),
   markRead: (id: string) => api.post(`/contacts/${encodeURIComponent(id)}/mark-read`)
@@ -323,7 +465,7 @@ export const messagesService = {
 }
 
 export const templatesService = {
-  list: (params?: { status?: string; category?: string; account?: string; search?: string; page?: number; limit?: number }) =>
+  list: (params?: { status?: string; category?: string; account?: string; search?: string; from?: string; to?: string; page?: number; limit?: number }) =>
     api.get<{ templates: any[]; total?: number }>('/templates', { params }),
   get: (id: string) => api.get(`/templates/${id}`),
   uploadMedia: (accountName: string, file: File) => {
@@ -348,6 +490,20 @@ export const flowsService = {
   sync: (whatsappAccount: string) => api.post('/flows/sync', { whatsapp_account: whatsappAccount })
 }
 
+export interface CampaignLog {
+  id: string
+  campaign_id: string
+  campaign_name: string
+  phone_number: string
+  recipient_name: string
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed'
+  error_message?: string
+  sent_at?: string
+  delivered_at?: string
+  read_at?: string
+  created_at: string
+}
+
 export const campaignsService = {
   list: (params?: { status?: string; from?: string; to?: string; search?: string; page?: number; limit?: number }) =>
     api.get('/campaigns', { params }),
@@ -359,6 +515,14 @@ export const campaignsService = {
   pause: (id: string) => api.post(`/campaigns/${id}/pause`),
   cancel: (id: string) => api.post(`/campaigns/${id}/cancel`),
   retryFailed: (id: string) => api.post(`/campaigns/${id}/retry-failed`),
+  schedule: (id: string, scheduledAt: string | null) =>
+    api.put(`/campaigns/${id}/schedule`, { scheduled_at: scheduledAt }),
+  retarget: (id: string, data: { audience: string; name?: string; template_id?: string }) =>
+    api.post<{ data: { id: string; name: string; total_recipients: number } }>(`/campaigns/${id}/retarget`, data),
+  logs: (params?: { status?: string; search?: string; campaign_id?: string; from?: string; to?: string; page?: number; limit?: number }) =>
+    api.get<{ data: { logs: CampaignLog[]; total: number } }>('/campaigns/logs', { params }),
+  exportLogs: (params?: { status?: string; search?: string; campaign_id?: string; from?: string; to?: string }) =>
+    api.get<Blob>('/campaigns/logs', { params: { ...params, format: 'csv' }, responseType: 'blob' }),
   // Recipients
   getRecipients: (id: string) => api.get(`/campaigns/${id}/recipients`),
   addRecipients: (id: string, recipients: Array<{ phone_number: string; recipient_name?: string; template_params?: Record<string, any> }>) =>

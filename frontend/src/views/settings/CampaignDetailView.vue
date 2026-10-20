@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -75,6 +76,8 @@ import {
   FileSpreadsheet,
   ChevronDown,
   Download,
+  MousePointerClick,
+  Target,
 } from 'lucide-vue-next'
 
 interface Campaign {
@@ -92,6 +95,8 @@ interface Campaign {
   delivered_count: number
   read_count: number
   failed_count: number
+  track_links?: boolean
+  clicked_count?: number
   scheduled_at?: string
   started_at?: string
   completed_at?: string
@@ -151,7 +156,62 @@ const form = ref({
   whatsapp_account: '',
   template_id: '',
   scheduled_at: '',
+  track_links: false,
 })
+
+// Schedule a draft campaign; the server's runner launches it at that time
+const scheduleAt = ref('')
+const isScheduling = ref(false)
+async function setSchedule(local: string | null) {
+  if (!campaign.value) return
+  isScheduling.value = true
+  try {
+    const iso = local ? new Date(local).toISOString() : null
+    await campaignsService.schedule(campaign.value.id, iso)
+    campaign.value.status = local ? 'scheduled' : 'draft'
+    campaign.value.scheduled_at = iso || undefined
+    scheduleAt.value = ''
+    toast.success(local ? t('campaigns.scheduledToast', 'Campaign scheduled') : t('campaigns.unscheduledToast', 'Schedule removed'))
+  } catch (e) {
+    toast.error(getErrorMessage(e, t('campaigns.scheduleFailed', 'Could not schedule the campaign')))
+  } finally {
+    isScheduling.value = false
+  }
+}
+
+// Retarget: send a follow-up campaign to part of this campaign's audience
+const showRetargetDialog = ref(false)
+const isRetargeting = ref(false)
+const retargetAudience = ref('not_read')
+const retargetName = ref('')
+const retargetAudiences = computed(() => [
+  { value: 'not_read', label: t('campaigns.audienceNotRead', 'Delivered but not read') },
+  { value: 'read', label: t('campaigns.audienceRead', 'Read') },
+  { value: 'not_replied', label: t('campaigns.audienceNotReplied', 'Did not reply') },
+  { value: 'replied', label: t('campaigns.audienceReplied', 'Replied') },
+  ...(campaign.value?.track_links ? [
+    { value: 'clicked', label: t('campaigns.audienceClicked', 'Clicked a link') },
+    { value: 'not_clicked', label: t('campaigns.audienceNotClicked', 'Did not click') },
+  ] : []),
+  { value: 'failed', label: t('campaigns.audienceFailed', 'Failed') },
+])
+const canRetarget = computed(() => !!campaign.value && !['draft', 'queued'].includes(campaign.value.status) && campaign.value.sent_count + campaign.value.failed_count > 0)
+
+async function retarget() {
+  if (!campaign.value || isRetargeting.value) return
+  isRetargeting.value = true
+  try {
+    const res = await campaignsService.retarget(campaign.value.id, { audience: retargetAudience.value, name: retargetName.value.trim() || undefined })
+    const created = res.data.data
+    toast.success(t('campaigns.retargetCreated', { n: created.total_recipients }, created.total_recipients))
+    showRetargetDialog.value = false
+    router.push(`/campaigns/${created.id}`)
+  } catch (e) {
+    toast.error(getErrorMessage(e, t('campaigns.retargetFailed', 'Could not create the follow-up campaign')))
+  } finally {
+    isRetargeting.value = false
+  }
+}
 
 const breadcrumbs = computed(() => [
   { label: t('nav.campaigns', 'Campaigns'), href: '/campaigns' },
@@ -380,6 +440,7 @@ function syncForm() {
     whatsapp_account: campaign.value.whatsapp_account || '',
     template_id: campaign.value.template_id || '',
     scheduled_at: campaign.value.scheduled_at ? campaign.value.scheduled_at.slice(0, 16) : '',
+    track_links: !!campaign.value.track_links,
   }
 }
 
@@ -425,6 +486,7 @@ async function save() {
       whatsapp_account: form.value.whatsapp_account || undefined,
       template_id: form.value.template_id || undefined,
       scheduled_at: form.value.scheduled_at || undefined,
+      track_links: form.value.track_links,
     }
     if (isNew.value) {
       const response = await campaignsService.create(payload)
@@ -1001,6 +1063,17 @@ onUnmounted(() => {
           {{ $t('campaigns.cancel', 'Cancel') }}
         </Button>
 
+        <!-- Retarget part of the audience -->
+        <Button
+          v-if="!isNew && canRetarget"
+          variant="outline"
+          size="sm"
+          @click="retargetName = ''; showRetargetDialog = true"
+        >
+          <Target class="h-4 w-4" />
+          {{ $t('campaigns.retarget', 'Retarget') }}
+        </Button>
+
         <!-- Retry Failed -->
         <Button
           v-if="!isNew && campaign && canRetryFailed"
@@ -1109,11 +1182,28 @@ onUnmounted(() => {
           />
         </div>
 
-        <!-- Schedule field hidden until scheduling functionality is implemented -->
-        <!-- <div class="space-y-1.5">
+        <!-- Schedule: the background runner starts it at this time -->
+        <div v-if="!isNew && campaign && (campaign.status === 'draft' || campaign.status === 'scheduled')" class="space-y-1.5">
           <Label class="text-xs">{{ $t('campaigns.scheduledAt', 'Schedule') }}</Label>
-          <Input v-model="form.scheduled_at" type="datetime-local" :disabled="!isDraft" />
-        </div> -->
+          <div v-if="campaign.status === 'scheduled'" class="flex items-center gap-2 rounded-lg border p-2 text-sm">
+            <Clock class="h-4 w-4 text-muted-foreground" />
+            <span class="flex-1">{{ $t('campaigns.scheduledFor', { at: formatDateTime(campaign.scheduled_at || '') }) }}</span>
+            <Button variant="ghost" size="sm" :disabled="isScheduling" @click="setSchedule(null)">{{ $t('campaigns.unschedule', 'Unschedule') }}</Button>
+          </div>
+          <div v-else class="flex items-center gap-2">
+            <Input v-model="scheduleAt" type="datetime-local" class="flex-1" />
+            <Button variant="outline" size="sm" :disabled="!scheduleAt || isScheduling" @click="setSchedule(scheduleAt)">
+              <Clock class="h-4 w-4" />{{ $t('campaigns.schedule', 'Schedule') }}
+            </Button>
+          </div>
+        </div>
+        <div class="flex items-start justify-between gap-4 rounded-lg border p-3">
+          <div>
+            <Label class="text-sm">{{ $t('campaigns.trackLinks', 'Track link clicks') }}</Label>
+            <p class="mt-0.5 text-xs text-muted-foreground">{{ $t('campaigns.trackLinksHint', 'Links you put in template variables become short links, so you can see who clicked and retarget them.') }}</p>
+          </div>
+          <Switch v-model:checked="form.track_links" :disabled="!isDraft" :aria-label="$t('campaigns.trackLinks', 'Track link clicks')" />
+        </div>
         <div v-if="!isNew && campaign" class="space-y-1.5">
           <Label class="text-xs">{{ $t('campaigns.status', 'Status') }}</Label>
           <div>
@@ -1132,7 +1222,7 @@ onUnmounted(() => {
         <CardTitle class="text-sm font-medium">{{ $t('campaigns.statistics', 'Statistics') }}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div :class="['grid grid-cols-2 sm:grid-cols-3 gap-3', campaign.track_links ? 'lg:grid-cols-6' : 'lg:grid-cols-5']">
           <div class="flex flex-col items-center gap-1 rounded-lg border p-3">
             <Users class="h-4 w-4 text-muted-foreground" />
             <span class="text-lg font-semibold">{{ campaign.total_recipients }}</span>
@@ -1157,6 +1247,11 @@ onUnmounted(() => {
             <XCircle class="h-4 w-4 text-destructive" />
             <span class="text-lg font-semibold">{{ campaign.failed_count }}</span>
             <span class="text-[10px] text-muted-foreground uppercase tracking-wide">{{ $t('campaigns.failed', 'Failed') }}</span>
+          </div>
+          <div v-if="campaign.track_links" class="flex flex-col items-center gap-1 rounded-lg border p-3">
+            <MousePointerClick class="h-4 w-4 text-sky-500" />
+            <span class="text-lg font-semibold">{{ campaign.clicked_count || 0 }}</span>
+            <span class="text-[10px] text-muted-foreground uppercase tracking-wide">{{ $t('campaigns.clicked', 'Clicked') }}</span>
           </div>
         </div>
 
@@ -1335,6 +1430,34 @@ onUnmounted(() => {
   />
 
   <!-- Add Recipients Dialog -->
+  <Dialog v-model:open="showRetargetDialog">
+    <DialogContent class="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>{{ $t('campaigns.retargetTitle', 'Retarget this audience') }}</DialogTitle>
+        <DialogDescription>{{ $t('campaigns.retargetDesc', 'Creates a new draft campaign with the matching recipients and their personalisation. Review it, then start it.') }}</DialogDescription>
+      </DialogHeader>
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label>{{ $t('campaigns.retargetWho', 'Who should get the follow-up?') }}</Label>
+          <Select v-model="retargetAudience">
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="a in retargetAudiences" :key="a.value" :value="a.value">{{ a.label }}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div class="space-y-2">
+          <Label>{{ $t('campaigns.retargetName', 'New campaign name (optional)') }}</Label>
+          <Input v-model="retargetName" :placeholder="campaign?.name + ' – follow-up'" />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" @click="showRetargetDialog = false">{{ $t('common.cancel') }}</Button>
+        <Button :disabled="isRetargeting" @click="retarget">{{ $t('campaigns.retargetCreate', 'Create follow-up') }}</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
   <Dialog v-model:open="showAddRecipientsDialog">
     <DialogContent class="sm:max-w-[550px]">
       <DialogHeader>

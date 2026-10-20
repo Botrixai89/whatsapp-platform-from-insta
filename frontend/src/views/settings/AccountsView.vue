@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/auth'
 import { toast } from 'vue-sonner'
 import { getErrorMessage } from '@/lib/api-utils'
 import { formatDate } from '@/lib/utils'
+import ConnectProviderDialog from './ConnectProviderDialog.vue'
 import {
   Plus,
   Pencil,
@@ -23,7 +24,8 @@ import {
   Loader2,
   Facebook,
   Smartphone,
-  Network
+  Network,
+  KeyRound
 } from 'lucide-vue-next'
 
 declare global {
@@ -48,6 +50,7 @@ interface WhatsAppAccount {
   status: string
   has_access_token: boolean
   has_app_secret: boolean
+  provider?: string
   created_at: string
 }
 
@@ -63,6 +66,12 @@ const whatsappConfig = ref<{ app_id: string; config_id: string; api_version: str
 const isFBSDKLoaded = ref(false)
 const isConnectingFB = ref(false)
 const showOnboardingDialog = ref(false)
+const showProviderDialog = ref(false)
+
+function openProviderDialog() {
+  showOnboardingDialog.value = false
+  showProviderDialog.value = true
+}
 
 const canWrite = computed(() => authStore.hasPermission('accounts', 'write'))
 const canDelete = computed(() => authStore.hasPermission('accounts', 'delete'))
@@ -272,6 +281,10 @@ async function confirmDelete() {
             <Facebook v-else class="h-4 w-4 mr-2" />
             {{ $t('accounts.connectFacebook') }}
           </Button>
+          <Button variant="outline" size="sm" @click="showProviderDialog = true">
+            <KeyRound class="h-4 w-4" />
+            {{ $t('accounts.providerButton') }}
+          </Button>
           <RouterLink to="/settings/accounts/new">
             <Button variant="outline" size="sm">
               <Plus class="h-4 w-4 mr-2" />
@@ -340,6 +353,7 @@ async function confirmDelete() {
                       <Phone class="h-4 w-4 text-emerald-500" />
                     </div>
                     <p class="font-medium truncate">{{ account.name }}</p>
+                    <Badge v-if="account.provider === 'heltar'" variant="secondary" class="text-[10px] shrink-0">{{ $t('accounts.providerBadge') }}</Badge>
                   </RouterLink>
                 </template>
                 <template #cell-app_id="{ item: account }">
@@ -475,8 +489,26 @@ async function confirmDelete() {
               <span class="group-hover:translate-x-1 transition-transform duration-200">→</span>
             </div>
           </div>
+
+          <!-- BotrixAI API (Heltar white-label) option -->
+          <button
+            type="button"
+            class="md:col-span-2 group flex items-center gap-4 p-4 rounded-xl border border-[#222227] bg-[#141419] text-left transition-colors hover:border-white/20 hover:bg-[#181822] light:bg-gray-50/50 light:border-gray-200 light:hover:bg-gray-100/70 light:hover:border-gray-300"
+            @click="openProviderDialog"
+          >
+            <div class="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center bg-white/[0.06] light:bg-gray-100">
+              <KeyRound class="h-5 w-5 text-white/70 light:text-gray-600" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-white light:text-gray-900">{{ $t('accounts.providerTitle') }}</p>
+              <p class="text-xs text-gray-400 light:text-gray-600 mt-0.5">{{ $t('accounts.providerCardDesc') }}</p>
+            </div>
+            <span class="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
+          </button>
         </div>
       </DialogContent>
     </Dialog>
+
+    <ConnectProviderDialog v-model:open="showProviderDialog" @connected="fetchAccounts" />
   </div>
 </template>

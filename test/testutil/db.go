@@ -135,6 +135,14 @@ func runMigrations(db *gorm.DB) error {
 		&models.MessageCharge{},
 		&models.MessageRate{},
 		&models.TemplateAIPrompt{},
+		&models.CSATResponse{},
+		&models.AdReferral{},
+		&models.TrackedLink{},
+		&models.Sequence{},
+		&models.SequenceStep{},
+		&models.SequenceEnrollment{},
+		&models.AIKnowledgeChunk{},
+		&models.PaymentOrder{},
 	)
 }
 
@@ -142,6 +150,16 @@ func runMigrations(db *gorm.DB) error {
 // Uses TRUNCATE CASCADE to handle foreign key constraints properly.
 func cleanupTables(db *gorm.DB) {
 	tables := []string{
+		// Engagement, growth, automation and payments tables
+		"payment_orders",
+		"ai_knowledge_chunks",
+		"sequence_enrollments",
+		"sequence_steps",
+		"sequences",
+		"tracked_links",
+		"ad_referrals",
+		"csat_responses",
+		"template_ai_prompts",
 		// Billing tables
 		"message_charges",
 		"message_rates",

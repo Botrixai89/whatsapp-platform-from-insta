@@ -125,6 +125,14 @@ func GetMigrationModels() []MigrationModel {
 
 		// AI template generator
 		{"TemplateAIPrompt", &models.TemplateAIPrompt{}},
+		{"CSATResponse", &models.CSATResponse{}},
+		{"AdReferral", &models.AdReferral{}},
+		{"TrackedLink", &models.TrackedLink{}},
+		{"Sequence", &models.Sequence{}},
+		{"SequenceStep", &models.SequenceStep{}},
+		{"SequenceEnrollment", &models.SequenceEnrollment{}},
+		{"AIKnowledgeChunk", &models.AIKnowledgeChunk{}},
+		{"PaymentOrder", &models.PaymentOrder{}},
 	}
 }
 

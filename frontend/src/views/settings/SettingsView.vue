@@ -8,11 +8,12 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import EngagementSettingsPanel from './EngagementSettingsPanel.vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader, AuditLogPanel } from '@/components/shared'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import { toast } from 'vue-sonner'
-import { Settings, Bell, Loader2, Globe, Phone, Upload, Play, Pause, Music } from 'lucide-vue-next'
+import { Settings, Bell, Loader2, Globe, Phone, Upload, Play, Pause, Music, HeartHandshake } from 'lucide-vue-next'
 import { usersService, organizationService } from '@/services/api'
 import { useAuthStore, type CallRingtone } from '@/stores/auth'
 import { previewRingtone } from '@/lib/ringtone'
@@ -254,7 +255,7 @@ function togglePlayAudio(type: 'hold_music' | 'ringback') {
     <ScrollArea class="flex-1">
       <div class="p-6 space-y-4 max-w-4xl mx-auto">
         <Tabs default-value="general" class="w-full">
-          <TabsList class="grid w-full grid-cols-3 mb-6 bg-white/[0.04] border border-white/[0.08] light:bg-gray-100 light:border-gray-200">
+          <TabsList class="grid w-full grid-cols-4 mb-6 bg-white/[0.04] border border-white/[0.08] light:bg-gray-100 light:border-gray-200">
             <TabsTrigger value="general" class="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-white/50 light:data-[state=active]:bg-white light:data-[state=active]:text-gray-900 light:text-gray-500">
               <Settings class="h-4 w-4 mr-2" />
               {{ $t('settings.general') }}
@@ -266,6 +267,10 @@ function togglePlayAudio(type: 'hold_music' | 'ringback') {
             <TabsTrigger value="calling" class="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-white/50 light:data-[state=active]:bg-white light:data-[state=active]:text-gray-900 light:text-gray-500">
               <Phone class="h-4 w-4 mr-2" />
               {{ $t('settings.calling') }}
+            </TabsTrigger>
+            <TabsTrigger value="engagement" class="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-white/50 light:data-[state=active]:bg-white light:data-[state=active]:text-gray-900 light:text-gray-500">
+              <HeartHandshake class="h-4 w-4 mr-2" />
+              {{ $t('engagement.tab') }}
             </TabsTrigger>
           </TabsList>
 
@@ -594,6 +599,10 @@ function togglePlayAudio(type: 'hold_music' | 'ringback') {
             <div v-if="orgID" class="mt-4">
               <AuditLogPanel :key="callingLogKey" resource-type="settings.calling" :resource-id="orgID" />
             </div>
+          </TabsContent>
+
+          <TabsContent value="engagement">
+            <EngagementSettingsPanel />
           </TabsContent>
         </Tabs>
       </div>

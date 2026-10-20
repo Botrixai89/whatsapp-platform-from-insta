@@ -33,6 +33,10 @@ export interface Contact {
   marketing_opt_out?: boolean
   conversation_status?: 'open' | 'closed'
   bot_paused?: boolean
+  is_blocked?: boolean
+  ad_headline?: string
+  ad_clicked_at?: string
+  opt_out_source?: string
   created_at: string
   updated_at: string
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/zerodha/logf"
@@ -69,6 +70,13 @@ func (c *Client) getBaseURL() string {
 
 // doRequest performs an HTTP request to the Meta API
 func (c *Client) doRequest(ctx context.Context, method, url string, body any, accessToken string) ([]byte, error) {
+	if strings.HasPrefix(url, heltarScheme) {
+		return c.doHeltar(ctx, method, url, body, accessToken)
+	}
+	// A provider API key never works on the Graph API; say so instead of surfacing Meta's auth error.
+	if strings.HasPrefix(accessToken, "hk_") {
+		return nil, ErrNotSupportedByProvider
+	}
 	var reqBody io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -228,11 +236,17 @@ func (c *Client) ValidateCredentials(ctx context.Context, phoneID, businessID, a
 
 // buildMessagesURL builds the messages endpoint URL
 func (c *Client) buildMessagesURL(account *Account) string {
+	if account.IsHeltar() {
+		return heltarTarget(account, "messages")
+	}
 	return fmt.Sprintf("%s/%s/%s/messages", c.getBaseURL(), account.APIVersion, account.PhoneID)
 }
 
 // buildTemplatesURL builds the message_templates endpoint URL
 func (c *Client) buildTemplatesURL(account *Account) string {
+	if account.IsHeltar() {
+		return heltarTarget(account, "templates")
+	}
 	return fmt.Sprintf("%s/%s/%s/message_templates", c.getBaseURL(), account.APIVersion, account.BusinessID)
 }
 
@@ -246,7 +260,11 @@ type MediaURLResponse struct {
 }
 
 // GetMediaURL retrieves the download URL for a media file from Meta's API
+// For Heltar accounts mediaID is the incoming message's wamid (see heltarMediaURL).
 func (c *Client) GetMediaURL(ctx context.Context, mediaID string, account *Account) (string, error) {
+	if account.IsHeltar() {
+		return c.heltarMediaURL(ctx, account, mediaID)
+	}
 	url := fmt.Sprintf("%s/%s/%s", c.getBaseURL(), account.APIVersion, mediaID)
 
 	respBody, err := c.doRequest(ctx, http.MethodGet, url, nil, account.AccessToken)
@@ -273,8 +291,10 @@ func (c *Client) DownloadMedia(ctx context.Context, mediaURL string, accessToken
 		return nil, fmt.Errorf("failed to create download request: %w", err)
 	}
 
-	// Meta requires Bearer token for media download
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	// Meta requires Bearer token for media download; provider CDN links are public
+	if accessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+	}
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -301,6 +321,9 @@ type UploadMediaResponse struct {
 
 // UploadMedia uploads media to WhatsApp's servers and returns the media ID
 func (c *Client) UploadMedia(ctx context.Context, account *Account, data []byte, mimeType, filename string) (string, error) {
+	if account.IsHeltar() {
+		return c.heltarUploadMedia(ctx, account, data, mimeType, filename)
+	}
 	url := fmt.Sprintf("%s/%s/%s/media", c.getBaseURL(), account.APIVersion, account.PhoneID)
 
 	// Create multipart form body
@@ -444,6 +467,9 @@ type ResumableUploadFinishResponse struct {
 // This is required for IMAGE, VIDEO, DOCUMENT header types in templates.
 // Returns a handle (like "4::aW1hZ2...") that can be used in template creation.
 func (c *Client) ResumableUpload(ctx context.Context, account *Account, data []byte, mimeType, filename string) (string, error) {
+	if account.IsHeltar() {
+		return "", ErrNotSupportedByProvider
+	}
 	if account.AppID == "" {
 		return "", fmt.Errorf("app_id is required for resumable upload")
 	}

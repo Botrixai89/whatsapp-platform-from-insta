@@ -13,6 +13,7 @@ encryption_key = ""  # AES-256 key for encrypting secrets at rest (32+ chars, re
 [server]
 host = "0.0.0.0"
 port = 8080
+# public_url = "https://app.example.com"  # public HTTPS address; used to register BotrixAI API (Heltar) webhooks
 read_timeout = 30
 write_timeout = 30
 base_path = ""  # Set to "/subpath" if behind nginx proxy pass
@@ -139,6 +140,14 @@ udp_port_max = 10100          # WebRTC UDP port range end
 # Platform AI keys used by the AI template generator when a client has not
 # set up their own chatbot AI provider. The first key present is used
 # (Anthropic, then OpenAI, then Google).
+# Self-serve wallet recharge (Razorpay). Leave empty to keep recharges manual.
+[payments]
+razorpay_key_id = ""
+razorpay_key_secret = ""
+razorpay_webhook_secret = ""   # Razorpay Dashboard > Webhooks; point it at /api/webhook/razorpay
+min_recharge = 100
+max_recharge = 200000
+
 [ai]
 anthropic_key = ""
 openai_key = ""
